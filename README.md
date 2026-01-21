@@ -4,7 +4,7 @@ A modern, responsive dashboard designed for Computer Science students to explore
 
 ## 🚀 Live Demo
 Access the interactive portal here:
-👉 **[PASTE YOUR GITHUB PAGES URL HERE]**
+👉 **https://adityasinha-1988.github.io/CSE2221-Cryptography/**
 
 ## 🧩 Modules Included
 The portal integrates several interactive ciphers:
@@ -24,7 +24,7 @@ Since the project is structured as a single-page portal, you can navigate back t
 
 ## 🎓 About the Author
 This project is developed and maintained by:
-**Aditya Sinha**
+**Dr.Aditya Sinha**
 *Assistant Professor, Dept. of CSE*
 **Manipal University Jaipur (MUJ)**
 
