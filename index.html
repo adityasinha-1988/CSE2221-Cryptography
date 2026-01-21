@@ -8,17 +8,59 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root { --bg: #0b0f1a; --card: #161b2c; --accent: #00d2ff; --text-p: #94a3b8; }
-        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: var(--bg); color: white; margin: 0; padding: 50px 20px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: var(--bg); color: white; margin: 0; padding: 50px 20px 0 20px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
+        
+        /* Header & Grid Styles */
         .header { text-align: center; margin-bottom: 60px; }
-        .header h1 { font-size: 3rem; background: linear-gradient(135deg, #fff, var(--accent)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-weight: 800; margin: 0; }
-        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; max-width: 1100px; width: 100%; }
-        .cipher-card { background: var(--card); border: 1px solid rgba(255,255,255,0.05); border-radius: 20px; padding: 30px; text-decoration: none; color: white; transition: 0.3s ease; position: relative; }
-        .cipher-card:hover { transform: translateY(-8px); border-color: var(--accent); box-shadow: 0 15px 30px rgba(0, 210, 255, 0.1); }
-        .icon-box { width: 45px; height: 45px; background: rgba(0, 210, 255, 0.1); border-radius: 10px; display: flex; align-items: center; justify-content: center; color: var(--accent); margin-bottom: 15px; }
-        .tag { font-size: 0.65rem; text-transform: uppercase; color: var(--accent); font-weight: 800; letter-spacing: 1px; margin-bottom: 5px; display: block; }
+        .header h1 { font-size: 3.2rem; background: linear-gradient(135deg, #fff, var(--accent)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-weight: 800; margin: 0; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 25px; max-width: 1100px; width: 100%; margin-bottom: 80px; }
+        .cipher-card { background: var(--card); border: 1px solid rgba(255,255,255,0.05); border-radius: 24px; padding: 35px; text-decoration: none; color: white; transition: 0.4s ease; position: relative; overflow: hidden; }
+        .cipher-card:hover { transform: translateY(-10px); border-color: var(--accent); box-shadow: 0 20px 40px rgba(0, 210, 255, 0.15); }
+        .icon-box { width: 50px; height: 50px; background: rgba(0, 210, 255, 0.1); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; color: var(--accent); margin-bottom: 15px; }
+
+        /* Professional Footer Section */
+        footer {
+            width: 100%;
+            background: #111827;
+            border-top: 1px solid rgba(255,255,255,0.05);
+            padding: 50px 0;
+            margin-top: auto;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .footer-content {
+            max-width: 1100px;
+            width: 90%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        .author-info h4 { margin: 0; font-size: 1.2rem; color: #fff; }
+        .author-info p { margin: 5px 0 0 0; color: var(--text-p); font-size: 0.9rem; }
+        .social-links { display: flex; gap: 15px; }
+        .github-btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: #24292e;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 10px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.9rem;
+            transition: 0.3s;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .github-btn:hover { background: #333; transform: scale(1.05); border-color: var(--accent); }
+        .muj-tag { color: var(--accent); font-weight: 700; font-size: 0.8rem; letter-spacing: 1px; }
     </style>
 </head>
 <body>
+
     <div class="header">
         <h1>Cryptography Portal</h1>
         <p style="color: var(--text-p)">Interactive Practical Modules for CSE Students</p>
@@ -26,39 +68,42 @@
 
     <div class="grid">
         <a href="Vigenere.html" class="cipher-card">
-            <span class="tag">Substitution</span>
             <div class="icon-box"><i class="fas fa-key"></i></div>
             <h3>Vigenère Cipher</h3>
-            <p style="color: var(--text-p); font-size: 0.85rem;">Polyalphabetic encryption simulation.</p>
+            <p style="color: var(--text-p); font-size: 0.9rem;">Polyalphabetic encryption simulation.</p>
         </a>
-
         <a href="Hill.html" class="cipher-card">
-            <span class="tag">Linear Algebra</span>
             <div class="icon-box"><i class="fas fa-th"></i></div>
             <h3>Hill Cipher</h3>
-            <p style="color: var(--text-p); font-size: 0.85rem;">Matrix-based modular encryption.</p>
+            <p style="color: var(--text-p); font-size: 0.9rem;">Matrix-based modular encryption.</p>
         </a>
-
         <a href="Play.html" class="cipher-card">
-            <span class="tag">Digraph</span>
             <div class="icon-box"><i class="fas fa-border-all"></i></div>
             <h3>Playfair Cipher</h3>
-            <p style="color: var(--text-p); font-size: 0.85rem;">5x5 Grid-based substitution cipher.</p>
+            <p style="color: var(--text-p); font-size: 0.9rem;">5x5 Grid-based substitution cipher.</p>
         </a>
-
         <a href="tranpost_railfence.html" class="cipher-card">
-            <span class="tag">Transposition</span>
             <div class="icon-box"><i class="fas fa-wave-square"></i></div>
             <h3>Rail Fence</h3>
-            <p style="color: var(--text-p); font-size: 0.85rem;">Zig-zag character rearrangement.</p>
-        </a>
-
-        <a href="Attacks.html" class="cipher-card">
-            <span class="tag" style="color:#f87171">Defense</span>
-            <div class="icon-box" style="color:#f87171"><i class="fas fa-user-secret"></i></div>
-            <h3>Attacks/Analysis</h3>
-            <p style="color: var(--text-p); font-size: 0.85rem;">Brute force and frequency analysis.</p>
+            <p style="color: var(--text-p); font-size: 0.9rem;">Zig-zag character rearrangement.</p>
         </a>
     </div>
+
+    <footer>
+        <div class="footer-content">
+            <div class="author-info">
+                <span class="muj-tag">MANIPAL UNIVERSITY JAIPUR</span>
+                <h4>Aditya Sinha</h4>
+                <p>Assistant Professor, Dept. of CSE</p>
+            </div>
+            <div class="social-links">
+                <a href="https://github.com/adityasinha-1988" target="_blank" class="github-btn">
+                    <i class="fab fa-github"></i> Follow on GitHub
+                </a>
+            </div>
+        </div>
+        <p style="margin-top: 30px; font-size: 0.75rem; color: #4b5563;">© 2026 Cryptography Lab Project. All Rights Reserved.</p>
+    </footer>
+
 </body>
 </html>
