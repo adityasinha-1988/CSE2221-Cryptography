@@ -38,7 +38,7 @@
 
         /* Header Styling */
         .header { text-align: center; margin-bottom: 50px; padding: 0 20px; }
-        .header h1 { font-size: clamp(2rem, 5vw, 3.2rem); margin: 0; background: linear-gradient(135deg, #fff, var(--accent)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-weight: 800; }
+        .header h1 { font-size: clamp(2rem, 5vw, 3.2rem); margin: 0; background: linear-gradient(135deg, #fff, var(--accent)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; font-weight: 800; }
         
         /* Section Title with Accent Border */
         .section-title { width: 90%; max-width: 1200px; margin: 40px 0 20px 0; font-size: 1.5rem; font-weight: 700; border-left: 4px solid var(--accent); padding-left: 15px; }
@@ -72,6 +72,23 @@
 
         .cipher-card h3 { font-size: 1.3rem; margin: 0 0 10px 0; }
         .cipher-card p { color: var(--text-p); font-size: 0.9rem; line-height: 1.5; margin: 0; }
+
+        /* New Card Styling & Badge */
+        .new-card:hover { border-color: var(--accent-danger); box-shadow: 0 20px 40px rgba(248, 113, 113, 0.15); }
+        .new-card .icon-box { background: rgba(248, 113, 113, 0.1); color: var(--accent-danger); }
+        
+        .badge-new {
+            background-color: var(--accent-danger);
+            color: #fff;
+            font-size: 0.65rem;
+            font-weight: 800;
+            padding: 3px 8px;
+            border-radius: 6px;
+            margin-left: 10px;
+            text-transform: uppercase;
+            vertical-align: middle;
+            box-shadow: 0 0 8px rgba(248, 113, 113, 0.5);
+        }
 
         /* Iframe Wrapper for Live DES Visualizer */
         .iframe-wrapper {
@@ -136,6 +153,11 @@
             <div class="icon-box"><i class="fas fa-dice"></i></div>
             <h3>Quantum Randomness</h3>
             <p>Analysis of entropy and cipher prediction algorithms.</p>
+        </a>
+        <a href="S-AES.html" class="cipher-card new-card">
+            <div class="icon-box"><i class="fas fa-lock"></i></div>
+            <h3>S-AES Visualizer <span class="badge-new">New</span></h3>
+            <p>Comprehensive step-by-step interactive simulation of Simplified AES (S-AES). Master substitution, permutation, and key expansion natively.</p>
         </a>
         <a href="https://adityasinha-1988.github.io/DES-Visualizer/" target="_blank" class="cipher-card">
             <div class="icon-box"><i class="fas fa-project-diagram"></i></div>

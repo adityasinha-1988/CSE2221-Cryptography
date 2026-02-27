@@ -1,0 +1,1176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>S-AES Cipher Visualizer</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600;700&family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0e1a;
+    --panel: #111827;
+    --border: #1e2d40;
+    --cyan: #00d4ff;
+    --green: #00ff9d;
+    --purple: #b06aff;
+    --orange: #ff6b35;
+    --yellow: #ffd60a;
+    --red: #ff4757;
+    --text: #e2e8f0;
+    --muted: #64748b;
+  }
+  * { box-sizing: border-box; }
+  body { background: var(--bg); color: var(--text); font-family: 'Space Grotesk', sans-serif; margin: 0; min-height: 100vh; }
+  code, .mono { font-family: 'JetBrains Mono', monospace; }
+
+  /* Animated background grid */
+  body::before {
+    content: '';
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background-image: linear-gradient(rgba(0,212,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(0,212,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none; z-index: 0;
+  }
+
+  .glow-cyan { box-shadow: 0 0 20px rgba(0,212,255,0.3), 0 0 40px rgba(0,212,255,0.1); }
+  .glow-green { box-shadow: 0 0 20px rgba(0,255,157,0.3); }
+  .glow-purple { box-shadow: 0 0 20px rgba(176,106,255,0.3); }
+  .text-cyan { color: var(--cyan); }
+  .text-green { color: var(--green); }
+  .text-purple { color: var(--purple); }
+  .text-orange { color: var(--orange); }
+  .text-yellow { color: var(--yellow); }
+  .text-red { color: var(--red); }
+  .border-cyan { border-color: var(--cyan); }
+  .border-green { border-color: var(--green); }
+  .bg-panel { background: var(--panel); }
+  .bg-border { border: 1px solid var(--border); }
+
+  /* Tabs */
+  .tab { cursor: pointer; padding: 8px 18px; border-radius: 8px; font-weight: 600; font-size: 0.82rem; transition: all 0.25s; border: 1px solid transparent; letter-spacing: 0.02em; white-space: nowrap; }
+  .tab.active { background: var(--cyan); color: #000; border-color: var(--cyan); box-shadow: 0 0 16px rgba(0,212,255,0.4); }
+  .tab:not(.active) { color: var(--muted); border-color: var(--border); background: rgba(255,255,255,0.02); }
+  .tab:not(.active):hover { color: var(--cyan); border-color: var(--cyan); background: rgba(0,212,255,0.05); }
+  .scrollbar-hide::-webkit-scrollbar { display: none; }
+  .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+
+  /* Step cards */
+  .step-card { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 16px; position: relative; overflow: hidden; transition: all 0.4s ease; opacity: 0; transform: translateY(20px); }
+  .step-card.visible { opacity: 1; transform: translateY(0); }
+  .step-card::before { content: ''; position: absolute; top: 0; left: 0; width: 3px; height: 100%; background: var(--cyan); }
+  .step-card.green-accent::before { background: var(--green); }
+  .step-card.purple-accent::before { background: var(--purple); }
+  .step-card.orange-accent::before { background: var(--orange); }
+  .step-card.yellow-accent::before { background: var(--yellow); }
+
+  /* Nibble display */
+  .nibble { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 6px; border: 1px solid var(--border); font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; font-weight: 600; transition: all 0.3s; }
+  .nibble.highlight { background: rgba(0,212,255,0.15); border-color: var(--cyan); color: var(--cyan); }
+  .nibble.result { background: rgba(0,255,157,0.15); border-color: var(--green); color: var(--green); }
+  .nibble.key-nibble { background: rgba(176,106,255,0.15); border-color: var(--purple); color: var(--purple); }
+
+  /* State matrix */
+  .state-matrix { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; width: fit-content; }
+  .state-cell { width: 70px; height: 50px; display: flex; align-items: center; justify-content: center; border-radius: 8px; border: 1px solid var(--border); font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; font-weight: 700; transition: all 0.4s; }
+  .state-cell.active { animation: pulse-cell 0.6s ease; }
+  @keyframes pulse-cell { 0%,100% { transform: scale(1); } 50% { transform: scale(1.08); box-shadow: 0 0 12px rgba(0,212,255,0.5); } }
+
+  /* XOR animation */
+  .xor-op { display: inline-block; width: 32px; height: 32px; border-radius: 50%; border: 2px solid var(--orange); color: var(--orange); display: inline-flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1rem; margin: 0 8px; animation: spin-xor 2s linear infinite; }
+  @keyframes spin-xor { 0%,100% { transform: scale(1); } 50% { transform: scale(1.2); box-shadow: 0 0 10px var(--orange); } }
+
+  /* S-Box table */
+  .sbox-table { border-collapse: collapse; }
+  .sbox-table th, .sbox-table td { width: 40px; height: 36px; text-align: center; font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; border: 1px solid var(--border); transition: all 0.3s; }
+  .sbox-table th { background: rgba(0,212,255,0.1); color: var(--cyan); font-size: 0.75rem; }
+  .sbox-table td { cursor: pointer; }
+  .sbox-table td:hover { background: rgba(0,212,255,0.2); }
+  .sbox-table td.highlighted { background: rgba(0,255,157,0.3); color: var(--green); font-weight: 700; box-shadow: 0 0 8px rgba(0,255,157,0.5); }
+  .sbox-table tr.row-highlight th:first-child, .sbox-table tr.row-highlight td { background: rgba(176,106,255,0.1); }
+
+  /* Flow diagram */
+  .flow-step { display: flex; flex-direction: column; align-items: center; }
+  .flow-box { padding: 10px 18px; border-radius: 8px; border: 1px solid; font-size: 0.8rem; font-weight: 600; text-align: center; min-width: 140px; }
+  .flow-arrow { width: 2px; height: 24px; margin: 4px auto; position: relative; }
+  .flow-arrow::after { content: '▼'; position: absolute; bottom: -8px; left: 50%; transform: translateX(-50%); font-size: 10px; }
+
+  /* Bit display */
+  .bit-group { display: inline-flex; gap: 2px; }
+  .bit { width: 20px; height: 28px; display: flex; align-items: center; justify-content: center; border-radius: 4px; font-family: 'JetBrains Mono', monospace; font-size: 0.85rem; font-weight: 700; transition: all 0.3s; border: 1px solid transparent; }
+  .bit.one { background: rgba(0,212,255,0.2); border-color: rgba(0,212,255,0.4); color: var(--cyan); }
+  .bit.zero { background: rgba(100,116,139,0.15); color: #4a5568; border-color: #2d3748; }
+
+  /* Animation classes */
+  @keyframes fadeInUp { from { opacity:0; transform:translateY(15px); } to { opacity:1; transform:translateY(0); } }
+  @keyframes glowPulse { 0%,100% { opacity:1; } 50% { opacity:0.6; } }
+  @keyframes slideIn { from { opacity:0; transform:translateX(-20px); } to { opacity:1; transform:translateX(0); } }
+  @keyframes xorFlash { 0%,100% { background:transparent; } 50% { background:rgba(255,107,53,0.3); } }
+
+  .animate-fade { animation: fadeInUp 0.5s ease forwards; }
+  .animate-glow { animation: glowPulse 2s ease-in-out infinite; }
+
+  /* Button */
+  .btn { padding: 10px 24px; border-radius: 8px; font-weight: 600; font-size: 0.85rem; cursor: pointer; transition: all 0.25s; border: none; letter-spacing: 0.03em; }
+  .btn-primary { background: var(--cyan); color: #000; }
+  .btn-primary:hover { box-shadow: 0 0 20px rgba(0,212,255,0.5); transform: translateY(-1px); }
+  .btn-secondary { background: transparent; color: var(--cyan); border: 1px solid var(--cyan); }
+  .btn-secondary:hover { background: rgba(0,212,255,0.1); }
+  .btn-green { background: var(--green); color: #000; }
+  .btn-green:hover { box-shadow: 0 0 20px rgba(0,255,157,0.5); }
+
+  /* Input */
+  .input-field { background: #0d1420; border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; color: var(--text); font-family: 'JetBrains Mono', monospace; font-size: 0.9rem; width: 100%; outline: none; transition: border-color 0.25s; }
+  .input-field:focus { border-color: var(--cyan); box-shadow: 0 0 0 3px rgba(0,212,255,0.1); }
+  .input-field.error { border-color: var(--red); }
+
+  /* Section */
+  .section { display: none; }
+  .section.active { display: block; }
+
+  /* Step indicator */
+  .step-indicator { display: flex; align-items: center; gap: 8px; margin-bottom: 24px; flex-wrap: wrap; }
+  .step-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--border); transition: all 0.3s; }
+  .step-dot.done { background: var(--green); }
+  .step-dot.current { background: var(--cyan); box-shadow: 0 0 8px var(--cyan); }
+  .step-line { flex: 1; height: 1px; background: var(--border); min-width: 20px; max-width: 40px; }
+
+  /* Mix columns matrix */
+  .matrix-bracket { font-size: 3rem; line-height: 1; color: var(--muted); font-weight: 100; }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  .tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; }
+
+  /* Key schedule visual */
+  .word-box { border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; text-align: center; min-width: 100px; }
+
+  /* Tooltip */
+  .tooltip { position: relative; cursor: help; }
+  .tooltip::after { content: attr(data-tip); position: absolute; bottom: 110%; left: 50%; transform: translateX(-50%); background: #1e293b; border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px; font-size: 0.75rem; white-space: nowrap; opacity: 0; pointer-events: none; transition: opacity 0.2s; z-index: 100; }
+  .tooltip:hover::after { opacity: 1; }
+</style>
+</head>
+<body class="relative z-10">
+
+<!-- Header -->
+<header class="relative z-10 border-b border-gray-800 sticky top-0" style="background: rgba(10,14,26,0.97)">
+  <div class="max-w-7xl mx-auto px-6">
+    <!-- Top row: logo -->
+    <div class="flex items-center justify-between py-3 border-b border-gray-800/50">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style="background: var(--cyan); box-shadow: 0 0 16px rgba(0,212,255,0.4)">
+          <span class="text-black font-bold text-base">🔐</span>
+        </div>
+        <div>
+          <h1 class="text-base font-bold text-white leading-none">S-AES Visualizer</h1>
+          <p class="text-xs mt-0.5" style="color: var(--muted)">Simplified Advanced Encryption Standard</p>
+        </div>
+      </div>
+      <div class="text-xs font-mono px-3 py-1 rounded-full" style="background:rgba(0,212,255,0.08);border:1px solid rgba(0,212,255,0.2);color:var(--cyan)">GF(2⁴) · 16-bit · 2 Rounds</div>
+    </div>
+    <!-- Bottom row: tabs -->
+    <div class="flex gap-1 py-2 overflow-x-auto scrollbar-hide">
+      <button class="tab active flex-shrink-0" onclick="showSection('encrypt')" id="tab-encrypt">⚙️ Encryption</button>
+      <button class="tab flex-shrink-0" onclick="showSection('decrypt')" id="tab-decrypt">🔓 Decryption</button>
+      <button class="tab flex-shrink-0" onclick="showSection('keygen')" id="tab-keygen">🗝️ Key Gen</button>
+      <button class="tab flex-shrink-0" onclick="showSection('sbox')" id="tab-sbox">📊 S-Box</button>
+      <button class="tab flex-shrink-0" onclick="showSection('theory')" id="tab-theory">📖 Theory</button>
+    </div>
+  </div>
+</header>
+
+<main class="max-w-7xl mx-auto px-6 py-8 relative z-10">
+
+
+<section id="sec-encrypt" class="section active">
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    
+    <!-- Input Panel -->
+    <div class="lg:col-span-1">
+      <div class="bg-panel bg-border rounded-xl p-6 sticky top-28">
+        <h2 class="font-bold text-lg mb-4 text-cyan flex items-center gap-2">
+          <span>⚙️</span> Inputs
+        </h2>
+        <div class="space-y-4">
+          <div>
+            <label class="text-xs font-semibold mb-2 block" style="color:var(--muted)">PLAINTEXT (16-bit binary)</label>
+            <input type="text" id="enc-plaintext" class="input-field" value="1101011100101000" maxlength="16" placeholder="16-bit binary">
+            <p class="text-xs mt-1" style="color:var(--muted)">Example: 1101011100101000</p>
+          </div>
+          <div>
+            <label class="text-xs font-semibold mb-2 block" style="color:var(--muted)">KEY K (16-bit binary)</label>
+            <input type="text" id="enc-key" class="input-field" value="0100101011110101" maxlength="16" placeholder="16-bit binary">
+          </div>
+          <div id="enc-error" class="hidden text-red-400 text-xs p-2 rounded" style="background:rgba(255,71,87,0.1)"></div>
+          <button class="btn btn-primary w-full" onclick="runEncryption()">▶ Run Encryption</button>
+          <button class="btn btn-secondary w-full" onclick="loadExample()">Load Example</button>
+        </div>
+
+        <!-- Architecture Diagram -->
+        <div class="mt-6 pt-6 border-t border-gray-800">
+          <h3 class="text-xs font-semibold mb-3" style="color:var(--muted)">ENCRYPTION FLOW</h3>
+          <div class="space-y-1 text-center text-xs">
+            <div class="flow-box" style="border-color:var(--cyan);color:var(--cyan);background:rgba(0,212,255,0.05)">Plaintext (16-bit)</div>
+            <div style="text-align:center;color:var(--muted)">↓ K₀</div>
+            <div class="flow-box" style="border-color:var(--green);color:var(--green);background:rgba(0,255,157,0.05)">Add Round Key</div>
+            <div style="color:var(--muted)">↓</div>
+            <div class="rounded-lg p-2" style="border:1px dashed var(--border)">
+              <div class="text-xs font-bold mb-1" style="color:var(--purple)">Round 1</div>
+              <div class="space-y-1">
+                <div class="flow-box text-xs py-1" style="border-color:var(--purple);color:var(--purple)">Nibble Sub</div>
+                <div style="color:var(--muted)">↓</div>
+                <div class="flow-box text-xs py-1" style="border-color:var(--purple);color:var(--purple)">Shift Row</div>
+                <div style="color:var(--muted)">↓</div>
+                <div class="flow-box text-xs py-1" style="border-color:var(--purple);color:var(--purple)">Mix Columns</div>
+                <div style="color:var(--muted)">↓ K₁</div>
+                <div class="flow-box text-xs py-1" style="border-color:var(--green);color:var(--green)">Add Round Key</div>
+              </div>
+            </div>
+            <div style="color:var(--muted)">↓</div>
+            <div class="rounded-lg p-2" style="border:1px dashed var(--border)">
+              <div class="text-xs font-bold mb-1" style="color:var(--orange)">Round 2 (Final)</div>
+              <div class="space-y-1">
+                <div class="flow-box text-xs py-1" style="border-color:var(--orange);color:var(--orange)">Nibble Sub</div>
+                <div style="color:var(--muted)">↓</div>
+                <div class="flow-box text-xs py-1" style="border-color:var(--orange);color:var(--orange)">Shift Row</div>
+                <div style="color:var(--muted)">↓ K₂</div>
+                <div class="flow-box text-xs py-1" style="border-color:var(--green);color:var(--green)">Add Round Key</div>
+              </div>
+            </div>
+            <div style="color:var(--muted)">↓</div>
+            <div class="flow-box" style="border-color:var(--yellow);color:var(--yellow);background:rgba(255,214,10,0.05)">Ciphertext (16-bit)</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Steps Display -->
+    <div class="lg:col-span-2" id="enc-steps">
+      <div class="text-center py-20" style="color:var(--muted)">
+        <div class="text-5xl mb-4">🔐</div>
+        <h3 class="text-lg font-semibold mb-2">Ready to Encrypt</h3>
+        <p class="text-sm">Enter your plaintext and key, then click Run Encryption to see each step animated.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="sec-decrypt" class="section">
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="lg:col-span-1">
+      <div class="bg-panel bg-border rounded-xl p-6 sticky top-28">
+        <h2 class="font-bold text-lg mb-4 text-green flex items-center gap-2">
+          <span>🔓</span> Decryption Inputs
+        </h2>
+        <div class="space-y-4">
+          <div>
+            <label class="text-xs font-semibold mb-2 block" style="color:var(--muted)">CIPHERTEXT (16-bit)</label>
+            <input type="text" id="dec-ciphertext" class="input-field" value="0010010011101100" maxlength="16">
+          </div>
+          <div>
+            <label class="text-xs font-semibold mb-2 block" style="color:var(--muted)">KEY K (16-bit)</label>
+            <input type="text" id="dec-key" class="input-field" value="0100101011110101" maxlength="16">
+          </div>
+          <button class="btn btn-green w-full" onclick="runDecryption()">▶ Run Decryption</button>
+          <button class="btn btn-secondary w-full" onclick="loadDecryptExample()">Load Example</button>
+        </div>
+        <div class="mt-6 pt-6 border-t border-gray-800">
+          <h3 class="text-xs font-semibold mb-3" style="color:var(--muted)">DECRYPTION FLOW</h3>
+          <div class="space-y-1 text-center text-xs">
+            <div class="flow-box" style="border-color:var(--yellow);color:var(--yellow)">Ciphertext</div>
+            <div style="color:var(--muted)">↓ K₂</div>
+            <div class="flow-box" style="border-color:var(--green);color:var(--green)">Add Round Key</div>
+            <div style="color:var(--muted)">↓</div>
+            <div class="rounded-lg p-2" style="border:1px dashed var(--border)">
+              <div class="text-xs font-bold mb-1" style="color:var(--purple)">Round 2 Inverse</div>
+              <div class="flow-box text-xs py-1 mb-1" style="border-color:var(--purple);color:var(--purple)">Inv Shift Row</div>
+              <div style="color:var(--muted)">↓</div>
+              <div class="flow-box text-xs py-1" style="border-color:var(--purple);color:var(--purple)">Inv Nibble Sub</div>
+            </div>
+            <div style="color:var(--muted)">↓ K₁</div>
+            <div class="flow-box" style="border-color:var(--green);color:var(--green)">Add Round Key</div>
+            <div style="color:var(--muted)">↓</div>
+            <div class="rounded-lg p-2" style="border:1px dashed var(--border)">
+              <div class="text-xs font-bold mb-1" style="color:var(--orange)">Round 1 Inverse</div>
+              <div class="flow-box text-xs py-1 mb-1" style="border-color:var(--orange);color:var(--orange)">Inv Mix Columns</div>
+              <div style="color:var(--muted)">↓</div>
+              <div class="flow-box text-xs py-1 mb-1" style="border-color:var(--orange);color:var(--orange)">Inv Shift Row</div>
+              <div style="color:var(--muted)">↓</div>
+              <div class="flow-box text-xs py-1" style="border-color:var(--orange);color:var(--orange)">Inv Nibble Sub</div>
+            </div>
+            <div style="color:var(--muted)">↓ K₀</div>
+            <div class="flow-box" style="border-color:var(--green);color:var(--green)">Add Round Key</div>
+            <div style="color:var(--muted)">↓</div>
+            <div class="flow-box" style="border-color:var(--cyan);color:var(--cyan)">Plaintext</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="lg:col-span-2" id="dec-steps">
+      <div class="text-center py-20" style="color:var(--muted)">
+        <div class="text-5xl mb-4">🔓</div>
+        <h3 class="text-lg font-semibold mb-2">Ready to Decrypt</h3>
+        <p class="text-sm">Enter ciphertext and key, then click Run Decryption.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="sec-keygen" class="section">
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="lg:col-span-1">
+      <div class="bg-panel bg-border rounded-xl p-6 sticky top-28">
+        <h2 class="font-bold text-lg mb-4 text-purple flex items-center gap-2">
+          <span>🗝️</span> Key Generation
+        </h2>
+        <div class="space-y-4">
+          <div>
+            <label class="text-xs font-semibold mb-2 block" style="color:var(--muted)">MASTER KEY K (16-bit)</label>
+            <input type="text" id="kg-key" class="input-field" value="0100101011110101" maxlength="16">
+          </div>
+          <button class="btn w-full" style="background:var(--purple);color:#fff" onclick="runKeyGen()">▶ Generate Keys</button>
+        </div>
+        <div class="mt-6 pt-6 border-t border-gray-800 text-xs space-y-3" style="color:var(--muted)">
+          <div><span style="color:var(--cyan)">RotNib(w):</span> Swap the two nibbles of w</div>
+          <div><span style="color:var(--cyan)">SubNib(w):</span> Apply S-Box to each nibble</div>
+          <div><span style="color:var(--cyan)">RCON₁:</span> 10000000</div>
+          <div><span style="color:var(--cyan)">RCON₂:</span> 00110000</div>
+        </div>
+      </div>
+    </div>
+    <div class="lg:col-span-2" id="kg-steps">
+      <div class="text-center py-20" style="color:var(--muted)">
+        <div class="text-5xl mb-4">🗝️</div>
+        <p>Enter master key and click Generate Keys</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<section id="sec-sbox" class="section">
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+    
+    <!-- Encryption S-Box -->
+    <div class="bg-panel bg-border rounded-xl p-6">
+      <h2 class="font-bold text-lg mb-2 text-cyan">Encryption S-Box</h2>
+      <p class="text-xs mb-4" style="color:var(--muted)">Click any nibble to trace its lookup path</p>
+      <div class="overflow-x-auto">
+        <table class="sbox-table" id="sbox-enc"></table>
+      </div>
+      <div id="sbox-enc-result" class="mt-4 hidden p-3 rounded-lg text-sm" style="background:rgba(0,212,255,0.05);border:1px solid var(--border)"></div>
+    </div>
+
+    <!-- Inverse S-Box -->
+    <div class="bg-panel bg-border rounded-xl p-6">
+      <h2 class="font-bold text-lg mb-2 text-green">Inverse S-Box (Decryption)</h2>
+      <p class="text-xs mb-4" style="color:var(--muted)">Used during decryption to reverse nibble substitution</p>
+      <div class="overflow-x-auto">
+        <table class="sbox-table" id="sbox-dec"></table>
+      </div>
+      <div id="sbox-dec-result" class="mt-4 hidden p-3 rounded-lg text-sm" style="background:rgba(0,255,157,0.05);border:1px solid var(--border)"></div>
+    </div>
+
+    <!-- Nibble Lookup Demo -->
+    <div class="lg:col-span-2 bg-panel bg-border rounded-xl p-6">
+      <h2 class="font-bold text-lg mb-4" style="color:var(--purple)">Interactive Nibble Lookup</h2>
+      <div class="flex items-center gap-4 flex-wrap">
+        <div>
+          <label class="text-xs font-semibold block mb-1" style="color:var(--muted)">INPUT NIBBLE (4-bit)</label>
+          <input type="text" id="nibble-input" class="input-field" style="width:120px" maxlength="4" placeholder="0000-1111" oninput="lookupNibble()">
+        </div>
+        <div>
+          <label class="text-xs font-semibold block mb-1" style="color:var(--muted)">BOX TYPE</label>
+          <select id="nibble-type" class="input-field" style="width:140px" onchange="lookupNibble()">
+            <option value="enc">Encryption</option>
+            <option value="dec">Decryption</option>
+          </select>
+        </div>
+      </div>
+      <div id="nibble-result" class="mt-4 hidden"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== THEORY SECTION ===================== -->
+<section id="sec-theory" class="section">
+  <div class="space-y-6">
+    <div class="bg-panel bg-border rounded-xl p-6">
+      <h2 class="font-bold text-2xl mb-4 text-cyan">S-AES Theory & Architecture</h2>
+      <p class="text-sm leading-relaxed mb-4" style="color:#94a3b8">Simplified AES (S-AES) is a pedagogical cipher designed to capture the essence of AES (Advanced Encryption Standard) while being simple enough to trace by hand. It operates on 16-bit plaintext blocks with a 16-bit key, producing a 16-bit ciphertext.</p>
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div class="rounded-lg p-4 text-center" style="background:rgba(0,212,255,0.05);border:1px solid rgba(0,212,255,0.2)">
+          <div class="text-2xl font-bold text-cyan mb-1">16</div>
+          <div class="text-xs" style="color:var(--muted)">Bit block size</div>
+        </div>
+        <div class="rounded-lg p-4 text-center" style="background:rgba(0,255,157,0.05);border:1px solid rgba(0,255,157,0.2)">
+          <div class="text-2xl font-bold text-green mb-1">16</div>
+          <div class="text-xs" style="color:var(--muted)">Bit key size</div>
+        </div>
+        <div class="rounded-lg p-4 text-center" style="background:rgba(176,106,255,0.05);border:1px solid rgba(176,106,255,0.2)">
+          <div class="text-2xl font-bold text-purple mb-1">2</div>
+          <div class="text-xs" style="color:var(--muted)">Rounds</div>
+        </div>
+        <div class="rounded-lg p-4 text-center" style="background:rgba(255,107,53,0.05);border:1px solid rgba(255,107,53,0.2)">
+          <div class="text-2xl font-bold text-orange mb-1">GF(2⁴)</div>
+          <div class="text-xs" style="color:var(--muted)">Field arithmetic</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div class="bg-panel bg-border rounded-xl p-6">
+        <h3 class="font-bold text-lg mb-3 text-cyan">State Matrix</h3>
+        <p class="text-sm mb-4" style="color:#94a3b8">The 16-bit data is organized as a 2×2 matrix of nibbles (4-bit values):</p>
+        <div class="flex items-center gap-4">
+          <div class="text-center">
+            <div class="mono text-xs mb-2 text-green">P = p₀p₁p₂p₃ p₄p₅p₆p₇ p₈p₉p₁₀p₁₁ p₁₂p₁₃p₁₄p₁₅</div>
+            <div class="flex items-center gap-2">
+              <span class="matrix-bracket">[</span>
+              <div class="state-matrix">
+                <div class="state-cell" style="background:rgba(0,212,255,0.1);border-color:var(--cyan);color:var(--cyan)">S₀₀</div>
+                <div class="state-cell" style="background:rgba(0,255,157,0.1);border-color:var(--green);color:var(--green)">S₀₁</div>
+                <div class="state-cell" style="background:rgba(176,106,255,0.1);border-color:var(--purple);color:var(--purple)">S₁₀</div>
+                <div class="state-cell" style="background:rgba(255,107,53,0.1);border-color:var(--orange);color:var(--orange)">S₁₁</div>
+              </div>
+              <span class="matrix-bracket">]</span>
+            </div>
+          </div>
+          <div class="text-sm" style="color:var(--muted)">
+            <div>S₀₀ = bits 0-3</div>
+            <div>S₀₁ = bits 4-7</div>
+            <div>S₁₀ = bits 8-11</div>
+            <div>S₁₁ = bits 12-15</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-panel bg-border rounded-xl p-6">
+        <h3 class="font-bold text-lg mb-3 text-purple">GF(2⁴) Arithmetic</h3>
+        <p class="text-sm mb-3" style="color:#94a3b8">Mix Columns uses multiplication in GF(2⁴) with irreducible polynomial x⁴+x+1.</p>
+        <div class="space-y-2 text-sm">
+          <div class="p-2 rounded" style="background:rgba(176,106,255,0.05);border:1px solid rgba(176,106,255,0.2)">
+            <span style="color:var(--purple)">Addition (XOR):</span> <span class="mono">0110 ⊕ 1010 = 1100</span>
+          </div>
+          <div class="p-2 rounded" style="background:rgba(176,106,255,0.05);border:1px solid rgba(176,106,255,0.2)">
+            <span style="color:var(--purple)">×2 (shift left, reduce):</span> <span class="mono text-xs">shift bits, XOR with 10011 if overflow</span>
+          </div>
+          <div class="p-2 rounded" style="background:rgba(176,106,255,0.05);border:1px solid rgba(176,106,255,0.2)">
+            <span style="color:var(--purple)">×4 = ×2 then ×2</span>
+          </div>
+          <div class="p-2 rounded" style="background:rgba(176,106,255,0.05);border:1px solid rgba(176,106,255,0.2)">
+            <span style="color:var(--purple)">×9 = ×8 ⊕ ×1</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-panel bg-border rounded-xl p-6">
+        <h3 class="font-bold text-lg mb-3 text-green">Mix Columns Matrix</h3>
+        <p class="text-sm mb-3" style="color:#94a3b8">Encryption uses Mₑ, Decryption uses Mₐ:</p>
+        <div class="flex gap-8">
+          <div>
+            <div class="text-xs mb-1" style="color:var(--cyan)">Encryption Mₑ</div>
+            <div class="flex items-center gap-1">
+              <span class="matrix-bracket text-2xl">[</span>
+              <div class="grid grid-cols-2 gap-1">
+                <div class="state-cell text-sm" style="width:44px;height:36px;border-color:var(--cyan);color:var(--cyan)">1</div>
+                <div class="state-cell text-sm" style="width:44px;height:36px;border-color:var(--cyan);color:var(--cyan)">4</div>
+                <div class="state-cell text-sm" style="width:44px;height:36px;border-color:var(--cyan);color:var(--cyan)">4</div>
+                <div class="state-cell text-sm" style="width:44px;height:36px;border-color:var(--cyan);color:var(--cyan)">1</div>
+              </div>
+              <span class="matrix-bracket text-2xl">]</span>
+            </div>
+          </div>
+          <div>
+            <div class="text-xs mb-1" style="color:var(--green)">Decryption Mₐ</div>
+            <div class="flex items-center gap-1">
+              <span class="matrix-bracket text-2xl">[</span>
+              <div class="grid grid-cols-2 gap-1">
+                <div class="state-cell text-sm" style="width:44px;height:36px;border-color:var(--green);color:var(--green)">9</div>
+                <div class="state-cell text-sm" style="width:44px;height:36px;border-color:var(--green);color:var(--green)">2</div>
+                <div class="state-cell text-sm" style="width:44px;height:36px;border-color:var(--green);color:var(--green)">2</div>
+                <div class="state-cell text-sm" style="width:44px;height:36px;border-color:var(--green);color:var(--green)">9</div>
+              </div>
+              <span class="matrix-bracket text-2xl">]</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-panel bg-border rounded-xl p-6">
+        <h3 class="font-bold text-lg mb-3 text-orange">Shift Row</h3>
+        <p class="text-sm mb-3" style="color:#94a3b8">Swap the 2nd and 4th nibbles of the 16-bit state:</p>
+        <div class="flex items-center gap-3 flex-wrap">
+          <div class="flex items-center gap-1">
+            <div class="state-cell" style="width:52px;height:40px;border-color:var(--cyan);color:var(--cyan);font-size:0.65rem">S₀₀</div>
+            <div class="state-cell" style="width:52px;height:40px;border-color:var(--orange);color:var(--orange);font-size:0.65rem">S₀₁↕</div>
+            <div class="state-cell" style="width:52px;height:40px;border-color:var(--cyan);color:var(--cyan);font-size:0.65rem">S₁₀</div>
+            <div class="state-cell" style="width:52px;height:40px;border-color:var(--orange);color:var(--orange);font-size:0.65rem">S₁₁↕</div>
+          </div>
+          <span style="color:var(--muted)">→</span>
+          <div class="flex items-center gap-1">
+            <div class="state-cell" style="width:52px;height:40px;border-color:var(--cyan);color:var(--cyan);font-size:0.65rem">S₀₀</div>
+            <div class="state-cell" style="width:52px;height:40px;border-color:var(--orange);color:var(--orange);font-size:0.65rem">S₁₁</div>
+            <div class="state-cell" style="width:52px;height:40px;border-color:var(--cyan);color:var(--cyan);font-size:0.65rem">S₁₀</div>
+            <div class="state-cell" style="width:52px;height:40px;border-color:var(--orange);color:var(--orange);font-size:0.65rem">S₀₁</div>
+          </div>
+        </div>
+        <p class="text-xs mt-2" style="color:var(--muted)">Nibbles at positions 2 and 4 (0-indexed: 1 and 3) are swapped</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<script>
+
+const SBOX = [
+  [0x9, 0x4, 0xA, 0xB],
+  [0xD, 0x1, 0x8, 0x5],
+  [0x6, 0x2, 0x0, 0x3],
+  [0xC, 0xE, 0xF, 0x7]
+];
+
+const SBOX_INV = [
+  [0xA, 0x5, 0x9, 0xB],
+  [0x1, 0x7, 0x8, 0xF],
+  [0x6, 0x0, 0x2, 0x3],
+  [0xC, 0x4, 0xD, 0xE]
+];
+
+const RCON1 = 0x80; // 10000000
+const RCON2 = 0x30; // 00110000
+
+// GF(2^4) multiplication with irreducible poly x^4+x+1 (10011)
+function gfMul(a, b) {
+  let p = 0;
+  for (let i = 0; i < 4; i++) {
+    if (b & 1) p ^= a;
+    b >>= 1;
+    let carry = a & 0x8;
+    a = (a << 1) & 0xF;
+    if (carry) a ^= 0x3; // reduce by x+1 (lower bits of 10011)
+  }
+  return p & 0xF;
+}
+
+function sboxLookup(nibble, inv=false) {
+  const row = (nibble >> 2) & 0x3;
+  const col = nibble & 0x3;
+  return inv ? SBOX_INV[row][col] : SBOX[row][col];
+}
+
+function nibbleSub(state, inv=false) {
+  return state.map(n => sboxLookup(n, inv));
+}
+
+function shiftRow(state) {
+  // state = [S00, S01, S10, S11], swap S01 and S11
+  return [state[0], state[3], state[2], state[1]];
+}
+
+function mixColumns(state) {
+  const [s00, s01, s10, s11] = state;
+  return [
+    gfMul(1,s00) ^ gfMul(4,s10),
+    gfMul(4,s00) ^ gfMul(1,s10),
+    gfMul(1,s01) ^ gfMul(4,s11),
+    gfMul(4,s01) ^ gfMul(1,s11)
+  ];
+}
+
+function invMixColumns(state) {
+  const [s00, s01, s10, s11] = state;
+  return [
+    gfMul(9,s00) ^ gfMul(2,s10),
+    gfMul(2,s00) ^ gfMul(9,s10),
+    gfMul(9,s01) ^ gfMul(2,s11),
+    gfMul(2,s01) ^ gfMul(9,s11)
+  ];
+}
+
+function addRoundKey(state, key) {
+  return state.map((n,i) => n ^ key[i]);
+}
+
+function toBin4(n) { return n.toString(2).padStart(4,'0'); }
+function toBin8(n) { return n.toString(2).padStart(8,'0'); }
+function toBin16(n) { return n.toString(2).padStart(16,'0'); }
+function toHex(n) { return n.toString(16).toUpperCase(); }
+
+function bitsToNibbles(bits) {
+  // bits is 16-char string, returns array of 4 nibbles
+  return [
+    parseInt(bits.slice(0,4),2),
+    parseInt(bits.slice(4,8),2),
+    parseInt(bits.slice(8,12),2),
+    parseInt(bits.slice(12,16),2)
+  ];
+}
+
+function nibblesToBits(nibbles) {
+  return nibbles.map(n => toBin4(n)).join(' ');
+}
+
+function keyExpansion(keyBits) {
+  const w0 = parseInt(keyBits.slice(0,8),2);
+  const w1 = parseInt(keyBits.slice(8,16),2);
+
+  const rotNib1 = ((w1 & 0xF) << 4) | ((w1 >> 4) & 0xF);
+  const subNib1 = (sboxLookup((rotNib1>>4)&0xF)<<4) | sboxLookup(rotNib1&0xF);
+  const w2 = w0 ^ RCON1 ^ subNib1;
+  const w3 = w2 ^ w1;
+
+  const rotNib3 = ((w3 & 0xF) << 4) | ((w3 >> 4) & 0xF);
+  const subNib3 = (sboxLookup((rotNib3>>4)&0xF)<<4) | sboxLookup(rotNib3&0xF);
+  const w4 = w2 ^ RCON2 ^ subNib3;
+  const w5 = w4 ^ w3;
+
+  const K0 = bitsToNibbles(keyBits);
+  const K1 = [(w2>>4)&0xF, w2&0xF, (w3>>4)&0xF, w3&0xF];
+  const K2 = [(w4>>4)&0xF, w4&0xF, (w5>>4)&0xF, w5&0xF];
+
+  return { w0,w1,w2,w3,w4,w5, K0,K1,K2, rotNib1,subNib1,rotNib3,subNib3 };
+}
+
+
+// UI HELPERS
+
+function showSection(name) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('sec-'+name).classList.add('active');
+  document.getElementById('tab-'+name).classList.add('active');
+}
+
+function validate16(bits) {
+  return /^[01]{16}$/.test(bits);
+}
+
+function renderBits(bits, color='var(--cyan)') {
+  return bits.split('').map((b,i) => {
+    const g = Math.floor(i/4);
+    const colors = ['var(--cyan)','var(--green)','var(--purple)','var(--orange)'];
+    const c = color === 'multi' ? colors[g] : color;
+    return `<span class="bit ${b==='1'?'one':'zero'}" style="${b==='1'?'border-color:'+c+';color:'+c+';background:'+c+'22':''}">${b}</span>`;
+  }).join('');
+}
+
+function renderNibbles(nibbles, colors=['var(--cyan)','var(--green)','var(--purple)','var(--orange)']) {
+  return nibbles.map((n,i) => `<span class="nibble" style="border-color:${colors[i%colors.length]};color:${colors[i%colors.length]};background:${colors[i%colors.length]}15">${toBin4(n)}</span>`).join('<span class="mx-1 text-gray-600">·</span>');
+}
+
+function renderMatrix(nibbles, colorMap={}) {
+  const labels = ['S₀₀','S₀₁','S₁₀','S₁₁'];
+  const defColors = ['var(--cyan)','var(--green)','var(--purple)','var(--orange)'];
+  return `
+    <div class="flex items-center gap-2">
+      <span class="matrix-bracket text-2xl">[</span>
+      <div class="state-matrix">
+        ${[0,1,2,3].map(i => {
+          const c = colorMap[i] || defColors[i];
+          return `<div class="state-cell text-xs tooltip" style="border-color:${c};color:${c};background:${c}15" data-tip="${labels[i]}=${toHex(nibbles[i])}">${toBin4(nibbles[i])}</div>`;
+        }).join('')}
+      </div>
+      <span class="matrix-bracket text-2xl">]</span>
+    </div>`;
+}
+
+function stepCard(title, content, accent='', delay=0) {
+  return `<div class="step-card ${accent}" style="animation-delay:${delay}ms;animation:fadeInUp 0.4s ease ${delay}ms both">
+    <div class="flex items-center gap-2 mb-3">
+      <div class="w-2 h-2 rounded-full" style="background:${accentColor(accent)}"></div>
+      <h3 class="font-bold text-sm" style="color:${accentColor(accent)}">${title}</h3>
+    </div>
+    ${content}
+  </div>`;
+}
+
+function accentColor(accent) {
+  const map = { 'green-accent':'var(--green)', 'purple-accent':'var(--purple)', 'orange-accent':'var(--orange)', 'yellow-accent':'var(--yellow)', '':'var(--cyan)' };
+  return map[accent] || 'var(--cyan)';
+}
+
+function xorRow(a, b, result, labelA='', labelB='') {
+  return `<div class="flex items-center gap-2 flex-wrap text-xs font-mono">
+    <span style="color:var(--muted);min-width:50px">${labelA}</span>
+    <div class="bit-group">${renderBits(a.map(n=>toBin4(n)).join(''),'var(--cyan)')}</div>
+    <div class="xor-op" style="animation:none;width:24px;height:24px;font-size:0.9rem">⊕</div>
+    <span style="color:var(--muted);min-width:50px">${labelB}</span>
+    <div class="bit-group">${renderBits(b.map(n=>toBin4(n)).join(''),'var(--purple)')}</div>
+    <span style="color:var(--muted)">=</span>
+    <div class="bit-group">${renderBits(result.map(n=>toBin4(n)).join(''),'var(--green)')}</div>
+  </div>`;
+}
+
+
+// ENCRYPTION
+
+function loadExample() {
+  document.getElementById('enc-plaintext').value = '1101011100101000';
+  document.getElementById('enc-key').value = '0100101011110101';
+}
+
+function loadDecryptExample() {
+  document.getElementById('dec-ciphertext').value = '0010010011101100';
+  document.getElementById('dec-key').value = '0100101011110101';
+}
+
+function runEncryption() {
+  const pt = document.getElementById('enc-plaintext').value.trim();
+  const key = document.getElementById('enc-key').value.trim();
+  const errEl = document.getElementById('enc-error');
+
+  if (!validate16(pt) || !validate16(key)) {
+    errEl.textContent = 'Both plaintext and key must be exactly 16 binary digits (0s and 1s).';
+    errEl.classList.remove('hidden');
+    return;
+  }
+  errEl.classList.add('hidden');
+
+  const keys = keyExpansion(key);
+  let state = bitsToNibbles(pt);
+  const steps = [];
+
+  // Step 0: Inputs
+  steps.push({ title: '🔢 Input State', content: renderInputStep(pt, key, state), accent: '' });
+
+  // Step 1: Add Round Key 0
+  const afterK0 = addRoundKey(state, keys.K0);
+  steps.push({ title: '🔑 Add Round Key K₀', content: renderAddKeyStep(state, keys.K0, afterK0, 'K₀'), accent: 'green-accent' });
+  state = afterK0;
+
+  // Step 2: Nibble Sub
+  const afterNS1 = nibbleSub(state);
+  steps.push({ title: '📊 Round 1 — Nibble Substitution (S-Box)', content: renderNibbleSubStep(state, afterNS1, false), accent: 'purple-accent' });
+  state = afterNS1;
+
+  // Step 3: Shift Row
+  const afterSR1 = shiftRow(state);
+  steps.push({ title: '↔️ Round 1 — Shift Row', content: renderShiftRowStep(state, afterSR1), accent: 'purple-accent' });
+  state = afterSR1;
+
+  // Step 4: Mix Columns
+  const afterMC = mixColumns(state);
+  steps.push({ title: '🔀 Round 1 — Mix Columns (GF(2⁴))', content: renderMixColumnsStep(state, afterMC, false), accent: 'purple-accent' });
+  state = afterMC;
+
+  // Step 5: Add Round Key 1
+  const afterK1 = addRoundKey(state, keys.K1);
+  steps.push({ title: '🔑 Add Round Key K₁', content: renderAddKeyStep(state, keys.K1, afterK1, 'K₁'), accent: 'green-accent' });
+  state = afterK1;
+
+  // Step 6: Nibble Sub Round 2
+  const afterNS2 = nibbleSub(state);
+  steps.push({ title: '📊 Round 2 — Nibble Substitution', content: renderNibbleSubStep(state, afterNS2, false), accent: 'orange-accent' });
+  state = afterNS2;
+
+  // Step 7: Shift Row Round 2
+  const afterSR2 = shiftRow(state);
+  steps.push({ title: '↔️ Round 2 — Shift Row', content: renderShiftRowStep(state, afterSR2), accent: 'orange-accent' });
+  state = afterSR2;
+
+  // Step 8: Add Round Key 2
+  const afterK2 = addRoundKey(state, keys.K2);
+  steps.push({ title: '🔑 Add Round Key K₂ (Final)', content: renderAddKeyStep(state, keys.K2, afterK2, 'K₂'), accent: 'green-accent' });
+  state = afterK2;
+
+  // Result
+  steps.push({ title: '🏆 Ciphertext', content: renderFinalStep(state, 'CIPHERTEXT', 'var(--yellow)'), accent: 'yellow-accent' });
+
+  renderSteps('enc-steps', steps);
+}
+
+function renderInputStep(pt, key, state) {
+  return `
+    <div class="space-y-3">
+      <div class="flex items-center gap-3 flex-wrap">
+        <span class="tag" style="background:rgba(0,212,255,0.2);color:var(--cyan)">PLAINTEXT</span>
+        <div class="bit-group">${renderBits(pt,'var(--cyan)')}</div>
+      </div>
+      <div class="flex items-center gap-3 flex-wrap">
+        <span class="tag" style="background:rgba(176,106,255,0.2);color:var(--purple)">KEY K</span>
+        <div class="bit-group">${renderBits(key,'var(--purple)')}</div>
+      </div>
+      <div class="pt-2 border-t border-gray-800">
+        <p class="text-xs mb-2" style="color:var(--muted)">State Matrix (nibbles):</p>
+        ${renderMatrix(state)}
+      </div>
+    </div>`;
+}
+
+function renderAddKeyStep(state, key, result, label) {
+  return `
+    <div class="space-y-3 text-sm">
+      <div class="p-3 rounded-lg" style="background:rgba(0,255,157,0.03);border:1px solid rgba(0,255,157,0.1)">
+        ${xorRow(state, key, result, 'State:', label+':')}
+      </div>
+      <div class="flex gap-6 flex-wrap">
+        <div>
+          <p class="text-xs mb-1" style="color:var(--muted)">Input State</p>
+          ${renderMatrix(state)}
+        </div>
+        <div class="text-xl self-center" style="color:var(--green)">⊕</div>
+        <div>
+          <p class="text-xs mb-1" style="color:var(--muted)">${label}</p>
+          ${renderMatrix(key, {0:'var(--purple)',1:'var(--purple)',2:'var(--purple)',3:'var(--purple)'})}
+        </div>
+        <div class="text-xl self-center" style="color:var(--muted)">=</div>
+        <div>
+          <p class="text-xs mb-1" style="color:var(--green)">Result</p>
+          ${renderMatrix(result, {0:'var(--green)',1:'var(--green)',2:'var(--green)',3:'var(--green)'})}
+        </div>
+      </div>
+    </div>`;
+}
+
+function renderNibbleSubStep(state, result, inv) {
+  const box = inv ? SBOX_INV : SBOX;
+  const colors = ['var(--cyan)','var(--green)','var(--purple)','var(--orange)'];
+  const labels = ['S₀₀','S₀₁','S₁₀','S₁₁'];
+  let details = '<div class="space-y-2 mt-3">';
+  state.forEach((n, i) => {
+    const row = (n>>2)&3, col = n&3;
+    const out = box[row][col];
+    details += `<div class="flex items-center gap-2 text-xs flex-wrap">
+      <span style="color:${colors[i]};min-width:30px">${labels[i]}</span>
+      <span class="mono" style="color:var(--muted)">0x${toHex(n)} = ${toBin4(n)}</span>
+      <span style="color:var(--muted)">→ SBox[${row}][${col}]</span>
+      <span style="color:var(--muted)">=</span>
+      <span class="mono" style="color:var(--green)">0x${toHex(out)} = ${toBin4(out)}</span>
+    </div>`;
+  });
+  details += '</div>';
+  return `<div class="space-y-3">
+    <p class="text-xs" style="color:var(--muted)">Each nibble is looked up in the ${inv?'Inverse ':''}S-Box using: row = leftmost 2 bits, col = rightmost 2 bits</p>
+    <div class="flex gap-6 flex-wrap">
+      <div><p class="text-xs mb-1" style="color:var(--muted)">Input</p>${renderMatrix(state)}</div>
+      <div class="self-center text-lg" style="color:var(--muted)">→</div>
+      <div><p class="text-xs mb-1" style="color:var(--green)">Output</p>${renderMatrix(result,{0:'var(--green)',1:'var(--green)',2:'var(--green)',3:'var(--green)'})}</div>
+    </div>
+    ${details}
+  </div>`;
+}
+
+function renderShiftRowStep(state, result) {
+  return `<div class="space-y-3">
+    <p class="text-xs" style="color:var(--muted)">Swap the 2nd nibble (S₀₁) and 4th nibble (S₁₁):</p>
+    <div class="flex items-center gap-4 flex-wrap">
+      <div>
+        <p class="text-xs mb-1" style="color:var(--muted)">Before</p>
+        <div class="flex gap-1 items-center">
+          ${state.map((n,i) => {
+            const labels = ['S₀₀','S₀₁','S₁₀','S₁₁'];
+            const colors = ['var(--cyan)','var(--orange)','var(--purple)','var(--orange)'];
+            return `<div class="text-center"><div class="state-cell text-xs mb-1" style="width:52px;height:38px;border-color:${colors[i]};color:${colors[i]}">${toBin4(n)}</div><div class="text-xs" style="color:var(--muted)">${labels[i]}</div></div>`;
+          }).join('<span class="mx-1" style="color:var(--muted)">|</span>')}
+        </div>
+      </div>
+      <div class="text-2xl" style="color:var(--orange)">⇄</div>
+      <div>
+        <p class="text-xs mb-1" style="color:var(--green)">After (2nd & 4th swapped)</p>
+        <div class="flex gap-1 items-center">
+          ${result.map((n,i) => {
+            const labels = ['S₀₀','S₁₁','S₁₀','S₀₁'];
+            const colors = ['var(--cyan)','var(--green)','var(--purple)','var(--green)'];
+            return `<div class="text-center"><div class="state-cell text-xs mb-1" style="width:52px;height:38px;border-color:${colors[i]};color:${colors[i]}">${toBin4(n)}</div><div class="text-xs" style="color:var(--muted)">${labels[i]}</div></div>`;
+          }).join('<span class="mx-1" style="color:var(--muted)">|</span>')}
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderMixColumnsStep(state, result, inv) {
+  const [s00,s01,s10,s11] = state;
+  const mat = inv ? [[9,2],[2,9]] : [[1,4],[4,1]];
+  const matName = inv ? 'Mₐ' : 'Mₑ';
+
+  function showCalc(coeff1, s1, coeff2, s2, res) {
+    return `(${coeff1}×${toBin4(s1)}) ⊕ (${coeff2}×${toBin4(s2)}) = ${toBin4(res)}`;
+  }
+
+  const r0 = inv ? gfMul(9,s00)^gfMul(2,s10) : gfMul(1,s00)^gfMul(4,s10);
+  const r1 = inv ? gfMul(2,s00)^gfMul(9,s10) : gfMul(4,s00)^gfMul(1,s10);
+  const r2 = inv ? gfMul(9,s01)^gfMul(2,s11) : gfMul(1,s01)^gfMul(4,s11);
+  const r3 = inv ? gfMul(2,s01)^gfMul(9,s11) : gfMul(4,s01)^gfMul(1,s11);
+
+  return `<div class="space-y-4">
+    <p class="text-xs" style="color:var(--muted)">Apply matrix multiplication ${matName} in GF(2⁴). Each output nibble is the dot product of a matrix row with a column of the state.</p>
+    <div class="flex items-center gap-2 flex-wrap">
+      <div><p class="text-xs mb-1" style="color:var(--muted)">State</p>${renderMatrix(state)}</div>
+      <div class="text-lg self-center" style="color:var(--muted)">×</div>
+      <div><p class="text-xs mb-1" style="color:var(--purple)">${matName}</p>
+        <div class="flex items-center"><span class="matrix-bracket text-2xl">[</span>
+          <div class="grid grid-cols-2 gap-1">${mat.flat().map(v=>`<div class="state-cell text-sm" style="width:36px;height:32px;border-color:var(--purple);color:var(--purple)">${v}</div>`).join('')}</div>
+        <span class="matrix-bracket text-2xl">]</span></div>
+      </div>
+      <div class="text-lg self-center" style="color:var(--muted)">=</div>
+      <div><p class="text-xs mb-1" style="color:var(--green)">Result</p>${renderMatrix(result,{0:'var(--green)',1:'var(--green)',2:'var(--green)',3:'var(--green)'})}</div>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs font-mono" style="color:var(--muted)">
+      <div class="p-2 rounded" style="background:rgba(0,212,255,0.05)"><span style="color:var(--cyan)">S'₀₀:</span> ${showCalc(mat[0][0],s00,mat[0][1],s10,r0)}</div>
+      <div class="p-2 rounded" style="background:rgba(0,255,157,0.05)"><span style="color:var(--green)">S'₁₀:</span> ${showCalc(mat[1][0],s00,mat[1][1],s10,r1)}</div>
+      <div class="p-2 rounded" style="background:rgba(176,106,255,0.05)"><span style="color:var(--purple)">S'₀₁:</span> ${showCalc(mat[0][0],s01,mat[0][1],s11,r2)}</div>
+      <div class="p-2 rounded" style="background:rgba(255,107,53,0.05)"><span style="color:var(--orange)">S'₁₁:</span> ${showCalc(mat[1][0],s01,mat[1][1],s11,r3)}</div>
+    </div>
+  </div>`;
+}
+
+function renderFinalStep(state, label, color) {
+  const bits = state.map(n=>toBin4(n)).join(' ');
+  return `<div class="space-y-3">
+    <div class="p-4 rounded-xl text-center" style="background:${color}15;border:2px solid ${color}">
+      <div class="text-xs font-bold mb-2" style="color:${color}">${label}</div>
+      <div class="bit-group justify-center flex flex-wrap gap-1">${renderBits(state.map(n=>toBin4(n)).join(''), color)}</div>
+      <div class="mt-2 mono text-xs" style="color:var(--muted)">${bits}</div>
+      <div class="mt-1 mono text-xs" style="color:var(--muted)">Hex: ${state.map(n=>toHex(n)).join('')}</div>
+    </div>
+    ${renderMatrix(state,{0:color,1:color,2:color,3:color})}
+  </div>`;
+}
+
+function renderSteps(containerId, steps) {
+  const container = document.getElementById(containerId);
+  
+  // Step indicator
+  const dotMap = { '': 'cyan', 'green-accent': 'green', 'purple-accent': 'purple', 'orange-accent': 'orange', 'yellow-accent': 'yellow' };
+  let indicator = '<div class="step-indicator mb-6">';
+  steps.forEach((s,i) => {
+    if (i > 0) indicator += '<div class="step-line"></div>';
+    indicator += `<div class="step-dot" id="dot-${i}-${containerId}" style="background:${accentColor(s.accent)}44"></div>`;
+  });
+  indicator += '</div>';
+
+  let html = indicator;
+  steps.forEach((s,i) => {
+    html += stepCard(s.title, s.content, s.accent, i*80);
+  });
+  container.innerHTML = html;
+
+  // Animate dots
+  steps.forEach((s,i) => {
+    setTimeout(() => {
+      const dot = document.getElementById(`dot-${i}-${containerId}`);
+      if (dot) dot.style.background = accentColor(s.accent);
+    }, i * 80 + 200);
+  });
+}
+
+
+function runDecryption() {
+  const ct = document.getElementById('dec-ciphertext').value.trim();
+  const key = document.getElementById('dec-key').value.trim();
+
+  if (!validate16(ct) || !validate16(key)) return;
+
+  const keys = keyExpansion(key);
+  let state = bitsToNibbles(ct);
+  const steps = [];
+
+  steps.push({ title: '🔢 Ciphertext Input', content: renderInputStep(ct, key, state), accent: '' });
+
+  // Add Round Key 2
+  const afterK2 = addRoundKey(state, keys.K2);
+  steps.push({ title: '🔑 Add Round Key K₂', content: renderAddKeyStep(state, keys.K2, afterK2, 'K₂'), accent: 'green-accent' });
+  state = afterK2;
+
+  // Inverse Shift Row (Round 2)
+  const afterISR2 = shiftRow(state); // same as shift row for 2×2
+  steps.push({ title: '↔️ Inverse Shift Row', content: renderShiftRowStep(state, afterISR2), accent: 'orange-accent' });
+  state = afterISR2;
+
+  // Inverse Nibble Sub (Round 2)
+  const afterINS2 = nibbleSub(state, true);
+  steps.push({ title: '📊 Inverse Nibble Substitution', content: renderNibbleSubStep(state, afterINS2, true), accent: 'orange-accent' });
+  state = afterINS2;
+
+  // Add Round Key 1
+  const afterK1 = addRoundKey(state, keys.K1);
+  steps.push({ title: '🔑 Add Round Key K₁', content: renderAddKeyStep(state, keys.K1, afterK1, 'K₁'), accent: 'green-accent' });
+  state = afterK1;
+
+  // Inverse Mix Columns
+  const afterIMC = invMixColumns(state);
+  steps.push({ title: '🔀 Inverse Mix Columns', content: renderMixColumnsStep(state, afterIMC, true), accent: 'purple-accent' });
+  state = afterIMC;
+
+  // Inverse Shift Row (Round 1)
+  const afterISR1 = shiftRow(state);
+  steps.push({ title: '↔️ Inverse Shift Row', content: renderShiftRowStep(state, afterISR1), accent: 'purple-accent' });
+  state = afterISR1;
+
+  // Inverse Nibble Sub (Round 1)
+  const afterINS1 = nibbleSub(state, true);
+  steps.push({ title: '📊 Inverse Nibble Substitution', content: renderNibbleSubStep(state, afterINS1, true), accent: 'purple-accent' });
+  state = afterINS1;
+
+  // Add Round Key 0
+  const afterK0 = addRoundKey(state, keys.K0);
+  steps.push({ title: '🔑 Add Round Key K₀', content: renderAddKeyStep(state, keys.K0, afterK0, 'K₀'), accent: 'green-accent' });
+  state = afterK0;
+
+  steps.push({ title: '✅ Recovered Plaintext', content: renderFinalStep(state, 'PLAINTEXT', 'var(--cyan)'), accent: 'yellow-accent' });
+
+  renderSteps('dec-steps', steps);
+}
+
+function runKeyGen() {
+  const key = document.getElementById('kg-key').value.trim();
+  if (!validate16(key)) return;
+
+  const k = keyExpansion(key);
+  const steps = [];
+
+  steps.push({ title: '🔢 Master Key K', content: `
+    <div class="space-y-2">
+      <div class="flex items-center gap-3">
+        <span class="tag" style="background:rgba(176,106,255,0.2);color:var(--purple)">K</span>
+        <div class="bit-group">${renderBits(key,'var(--purple)')}</div>
+      </div>
+      <div class="flex gap-4 mt-2">
+        <div class="word-box"><div class="text-xs mb-1" style="color:var(--muted)">w₀</div><div class="mono text-xs text-cyan">${toBin8(k.w0)}</div></div>
+        <div class="word-box"><div class="text-xs mb-1" style="color:var(--muted)">w₁</div><div class="mono text-xs text-green">${toBin8(k.w1)}</div></div>
+      </div>
+      <p class="text-xs" style="color:var(--muted)">Key₀ = w₀w₁ = K (the original key)</p>
+    </div>`, accent: '' });
+
+  steps.push({ title: '🔑 Generate w₂', content: `
+    <div class="space-y-2 text-xs">
+      <p style="color:var(--muted)">w₂ = w₀ ⊕ RCON₁ ⊕ SubNib(RotNib(w₁))</p>
+      <div class="p-2 rounded space-y-1" style="background:rgba(0,212,255,0.03);border:1px solid var(--border)">
+        <div><span style="color:var(--muted)">RotNib(w₁) = </span><span class="mono text-cyan">${toBin8(k.rotNib1)}</span> <span style="color:var(--muted)">(swap nibbles of w₁)</span></div>
+        <div><span style="color:var(--muted)">SubNib(...) = </span><span class="mono text-green">${toBin8(k.subNib1)}</span> <span style="color:var(--muted)">(apply S-Box)</span></div>
+        <div class="font-mono flex flex-col gap-1 mt-2">
+          <div><span style="color:var(--muted)">w₀     =</span> <span class="text-cyan">${toBin8(k.w0)}</span></div>
+          <div><span style="color:var(--muted)">RCON₁  =</span> <span class="text-orange">${toBin8(RCON1)}</span></div>
+          <div><span style="color:var(--muted)">SubNib =</span> <span class="text-green">${toBin8(k.subNib1)}</span></div>
+          <div style="border-top:1px solid var(--border);padding-top:4px"><span style="color:var(--muted)">w₂     =</span> <span class="text-yellow">${toBin8(k.w2)}</span></div>
+        </div>
+      </div>
+    </div>`, accent: 'purple-accent' });
+
+  steps.push({ title: '🔑 Generate w₃', content: `
+    <div class="space-y-2 text-xs">
+      <p style="color:var(--muted)">w₃ = w₂ ⊕ w₁</p>
+      <div class="font-mono flex flex-col gap-1 p-2 rounded" style="background:rgba(0,212,255,0.03);border:1px solid var(--border)">
+        <div><span style="color:var(--muted)">w₂ =</span> <span class="text-yellow">${toBin8(k.w2)}</span></div>
+        <div><span style="color:var(--muted)">w₁ =</span> <span class="text-green">${toBin8(k.w1)}</span></div>
+        <div style="border-top:1px solid var(--border);padding-top:4px"><span style="color:var(--muted)">w₃ =</span> <span class="text-cyan">${toBin8(k.w3)}</span></div>
+      </div>
+      <div class="p-2 rounded" style="background:rgba(0,255,157,0.05);border:1px solid rgba(0,255,157,0.2)">
+        <div class="font-bold mb-1" style="color:var(--green)">Key₁ = w₂w₃</div>
+        <div class="mono text-green">${toBin8(k.w2)} ${toBin8(k.w3)}</div>
+        <div class="flex gap-2 mt-2">${renderMatrix(k.K1,{0:'var(--green)',1:'var(--green)',2:'var(--green)',3:'var(--green)'})}</div>
+      </div>
+    </div>`, accent: 'green-accent' });
+
+  steps.push({ title: '🔑 Generate w₄', content: `
+    <div class="space-y-2 text-xs">
+      <p style="color:var(--muted)">w₄ = w₂ ⊕ RCON₂ ⊕ SubNib(RotNib(w₃))</p>
+      <div class="p-2 rounded space-y-1" style="background:rgba(0,212,255,0.03);border:1px solid var(--border)">
+        <div><span style="color:var(--muted)">RotNib(w₃) = </span><span class="mono text-cyan">${toBin8(k.rotNib3)}</span></div>
+        <div><span style="color:var(--muted)">SubNib(...) = </span><span class="mono text-green">${toBin8(k.subNib3)}</span></div>
+        <div class="font-mono flex flex-col gap-1 mt-2">
+          <div><span style="color:var(--muted)">w₂     =</span> <span class="text-yellow">${toBin8(k.w2)}</span></div>
+          <div><span style="color:var(--muted)">RCON₂  =</span> <span class="text-orange">${toBin8(RCON2)}</span></div>
+          <div><span style="color:var(--muted)">SubNib =</span> <span class="text-green">${toBin8(k.subNib3)}</span></div>
+          <div style="border-top:1px solid var(--border);padding-top:4px"><span style="color:var(--muted)">w₄     =</span> <span class="text-yellow">${toBin8(k.w4)}</span></div>
+        </div>
+      </div>
+    </div>`, accent: 'purple-accent' });
+
+  steps.push({ title: '🔑 Generate w₅ & Final Keys', content: `
+    <div class="space-y-3 text-xs">
+      <div class="font-mono flex flex-col gap-1 p-2 rounded" style="background:rgba(0,212,255,0.03);border:1px solid var(--border)">
+        <div><span style="color:var(--muted)">w₄ =</span> <span class="text-yellow">${toBin8(k.w4)}</span></div>
+        <div><span style="color:var(--muted)">w₃ =</span> <span class="text-cyan">${toBin8(k.w3)}</span></div>
+        <div style="border-top:1px solid var(--border);padding-top:4px"><span style="color:var(--muted)">w₅ =</span> <span class="text-purple">${toBin8(k.w5)}</span></div>
+      </div>
+      <div class="grid grid-cols-3 gap-3">
+        ${[['K₀','K0','var(--cyan)'],['K₁','K1','var(--green)'],['K₂','K2','var(--orange)']].map(([label,kk,c]) => `
+          <div class="p-3 rounded-lg" style="background:${c}10;border:1px solid ${c}44">
+            <div class="font-bold text-sm mb-2" style="color:${c}">${label}</div>
+            <div class="mono text-xs mb-2" style="color:var(--muted)">${k[kk].map(n=>toBin4(n)).join(' ')}</div>
+            ${renderMatrix(k[kk],{0:c,1:c,2:c,3:c})}
+          </div>`).join('')}
+      </div>
+    </div>`, accent: 'yellow-accent' });
+
+  renderSteps('kg-steps', steps);
+}
+
+function renderSBoxTable(tableId, box, resultId, color) {
+  const table = document.getElementById(tableId);
+  const cols = ['00','01','10','11'];
+  let html = '<thead><tr><th style="background:transparent;border:none"></th>';
+  cols.forEach(c => html += `<th>${c}</th>`);
+  html += '</tr></thead><tbody>';
+  cols.forEach((row,ri) => {
+    html += `<tr><th style="background:rgba(0,212,255,0.1)">${row}</th>`;
+    cols.forEach((col,ci) => {
+      const val = box[ri][ci];
+      html += `<td onclick="highlightSBox('${tableId}','${resultId}',${ri},${ci},${val},${ri*4+ci},'${color}')">${val.toString(16).toUpperCase()}</td>`;
+    });
+    html += '</tr>';
+  });
+  html += '</tbody>';
+  table.innerHTML = html;
+}
+
+function highlightSBox(tableId, resultId, row, col, val, nibble, color) {
+  const table = document.getElementById(tableId);
+  table.querySelectorAll('td').forEach(td => td.classList.remove('highlighted'));
+  const cells = table.querySelectorAll('tbody td');
+  cells[nibble].classList.add('highlighted');
+
+  const input = row.toString(2).padStart(2,'0') + col.toString(2).padStart(2,'0');
+  const output = toBin4(val);
+  const el = document.getElementById(resultId);
+  el.classList.remove('hidden');
+  el.innerHTML = `<div class="flex items-center gap-3 flex-wrap text-sm">
+    <span style="color:var(--muted)">Input nibble:</span>
+    <span class="mono" style="color:${color}">${input}</span>
+    <span style="color:var(--muted)">→ row=${row.toString(2).padStart(2,'0')}, col=${col.toString(2).padStart(2,'0')}</span>
+    <span style="color:var(--muted)">→ Output:</span>
+    <span class="mono font-bold" style="color:var(--green)">${output} (${val.toString(16).toUpperCase()})</span>
+  </div>`;
+}
+
+function lookupNibble() {
+  const input = document.getElementById('nibble-input').value.trim();
+  const type = document.getElementById('nibble-type').value;
+  const el = document.getElementById('nibble-result');
+
+  if (!/^[01]{4}$/.test(input)) { el.classList.add('hidden'); return; }
+
+  const nibble = parseInt(input, 2);
+  const row = (nibble >> 2) & 3;
+  const col = nibble & 3;
+  const box = type === 'enc' ? SBOX : SBOX_INV;
+  const out = box[row][col];
+
+  el.classList.remove('hidden');
+  el.innerHTML = `<div class="p-4 rounded-xl" style="background:rgba(0,212,255,0.05);border:1px solid var(--border)">
+    <div class="flex items-center gap-4 flex-wrap text-sm">
+      <div><span style="color:var(--muted)">Input:</span> <span class="mono text-cyan font-bold">${input}</span></div>
+      <div style="color:var(--muted)">Row = ${row.toString(2).padStart(2,'0')}, Col = ${col.toString(2).padStart(2,'0')}</div>
+      <div><span style="color:var(--muted)">Lookup:</span> <span class="mono" style="color:var(--purple)">SBox[${row}][${col}]</span></div>
+      <div><span style="color:var(--muted)">Output:</span> <span class="mono text-green font-bold">${toBin4(out)} (0x${toHex(out)})</span></div>
+    </div>
+  </div>`;
+}
+
+window.onload = function() {
+  renderSBoxTable('sbox-enc', SBOX, 'sbox-enc-result', 'var(--cyan)');
+  renderSBoxTable('sbox-dec', SBOX_INV, 'sbox-dec-result', 'var(--green)');
+};
+</script>
+</body>
+</html>
