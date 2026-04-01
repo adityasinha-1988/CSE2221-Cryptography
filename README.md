@@ -12,6 +12,7 @@ The portal integrates several interactive ciphers:
 * **Hill Cipher:** Matrix-based polygraphic encryption using modular arithmetic.
 * **Playfair Cipher:** Digraph substitution using a 5x5 character grid.
 * **Rail Fence Cipher:** Visualization of transposition (zig-zag) patterns.
+* **Avalanche Effect Analyzer:** Observe the bit-level cascade effect in AES encryption.
 * **Cryptanalysis:** Tools for frequency analysis and brute-force testing.
 
 ## 🛠️ Built With
