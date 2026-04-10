@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cryptography Hall of Fame</title>
     
+    <meta name="referrer" content="no-referrer" />
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -26,6 +27,33 @@
         .glow-text { text-shadow: 0 0 15px rgba(0, 240, 255, 0.6); }
         .timeline-line { box-shadow: 0 0 15px rgba(0, 240, 255, 0.4); }
         
+        /* Unpack Animation Styles */
+        .mechanism-container {
+            max-height: 0;
+            opacity: 0;
+            overflow: hidden;
+            transition: max-height 0.6s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.4s ease, margin-top 0.4s ease;
+        }
+        
+        .tilt-card:hover .mechanism-container {
+            max-height: 600px;
+            opacity: 1;
+            margin-top: 1.5rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid rgba(51, 65, 85, 0.5);
+        }
+
+        .mechanism-item {
+            opacity: 0;
+            transform: translateX(20px);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .tilt-card:hover .mechanism-item {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
         @media (min-width: 768px) {
             .tilt-card { transform-style: preserve-3d; display: flex; }
             .tilt-card-inner { transform: translateZ(30px); }
@@ -40,70 +68,116 @@
     <script type="text/babel">
         const { useState, useEffect, useRef, useCallback } = React;
 
-        // SVG Icons fixed sizes to prevent UI blowout during loading
         const QuoteIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 text-cyan-400 opacity-60 shrink-0 mt-1"><path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10h-9.983zm-14.017 0v-7.391c0-5.704 3.748-9.57 9-10.609l.996 2.151c-2.433.917-3.996 3.638-3.996 5.849h3.983v10h-9.983z" /></svg>;
         const TopicIcon = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 mr-3 text-cyan-400 shrink-0"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>;
         const ImpactIcon = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 mr-3 text-emerald-400 shrink-0"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>;
-        const UserIcon = () => <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-16 h-16 text-slate-500 mb-2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>;
+        const CodeIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-cyan-500 mr-2 shrink-0 mt-0.5"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>;
 
-        // --- Data Structure with Direct Wikimedia Commons Thumbnails ---
         const chronologicalData = [
           {
             era: "The Perspective",
             items: [
-              { year: "1990", name: "Carl Sagan", wikiTerm: "Carl_Sagan", url: "https://en.wikipedia.org/wiki/Carl_Sagan", topic: "The Pale Blue Dot (Perspective)", context: "Before the modern internet boom, reminded humanity of our scale. A philosophical anchor for why we protect data on our fragile, solitary world.", quote: "Look again at that dot. That's here. That's home. That's us." }
+              { year: "1990", name: "Carl Sagan", wikiTerm: "Carl_Sagan", url: "https://en.wikipedia.org/wiki/Carl_Sagan", 
+                topic: "The Pale Blue Dot", context: "Before the modern internet boom, reminded humanity of our scale. A philosophical anchor for why we protect data.", 
+                quote: "Look again at that dot. That's here. That's home. That's us.",
+                mechanism: ["Information is the universe's way of organizing chaos.", "Cryptography preserves this order locally against universal entropy."] }
             ]
           },
           {
             era: "Ancient Foundations (300 BC - 600 AD)",
             items: [
-              { year: "~300 BC", name: "Euclid", wikiTerm: "Euclid", url: "https://en.wikipedia.org/wiki/Euclid", topic: "Euclidean & Extended Euclidean Algorithm", context: "Established the mathematical foundation required to compute the Modulo Inverse, crucial for generating the RSA private key (d).", quote: "There is no royal road to geometry." },
-              { year: "~276 BC", name: "Eratosthenes", wikiTerm: "Eratosthenes", url: "https://en.wikipedia.org/wiki/Eratosthenes", topic: "Sieve of Eratosthenes", context: "Created the first systematic algorithm for finding prime numbers. This remains the conceptual foundation for RSA prime generation." },
-              { year: "~3rd Century", name: "Sun Tzu", wikiTerm: "Sunzi_Suanjing", url: "https://en.wikipedia.org/wiki/Sunzi_Suanjing", topic: "Chinese Remainder Theorem (CRT)", context: "Originated in the Sun Tzu Suanjing. This mathematical theorem is used today to accelerate real-world RSA decryption by roughly 4x." },
-              { year: "598 AD", name: "Brahmagupta", wikiTerm: "Brahmagupta", url: "https://en.wikipedia.org/wiki/Brahmagupta", topic: "Brahmasphutasiddhanta", context: "Formulated the mathematical rules for zero, negative numbers, and solving linear Diophantine equations—the bedrock of modular arithmetic." }
+              { year: "~300 BC", name: "Euclid", wikiTerm: "Euclid", url: "https://en.wikipedia.org/wiki/Euclid", 
+                topic: "Euclidean Algorithm", context: "Established the mathematical foundation required to compute the Modulo Inverse, crucial for RSA.", 
+                mechanism: ["gcd(a, b) = gcd(b, a mod b)", "Extended form solves: ax + by = gcd(a, b)", "Used to find private key 'd' in RSA."] },
+              { year: "~276 BC", name: "Eratosthenes", wikiTerm: "Eratosthenes", url: "https://en.wikipedia.org/wiki/Eratosthenes", 
+                topic: "Sieve of Eratosthenes", context: "Created the first systematic algorithm for finding prime numbers.", 
+                mechanism: ["1. List integers from 2 to n.", "2. Cross out all multiples of 2.", "3. Cross out multiples of next available number.", "4. Remaining numbers are prime."] },
+              { year: "~3rd Cent.", name: "Sun Tzu", wikiTerm: "Sunzi_Suanjing", url: "https://en.wikipedia.org/wiki/Sunzi_Suanjing", 
+                topic: "Chinese Remainder Theorem", context: "Mathematical theorem used today to accelerate real-world RSA decryption by roughly 4x.", 
+                mechanism: ["x ≡ a₁ (mod m₁), x ≡ a₂ (mod m₂)", "Let M = m₁ × m₂", "Solution x exists mod M if gcd(m₁, m₂) = 1", "Speeds up decryption using factors p and q."] },
+              { year: "598 AD", name: "Brahmagupta", wikiTerm: "Brahmagupta", url: "https://en.wikipedia.org/wiki/Brahmagupta", 
+                topic: "Brahmasphutasiddhanta", context: "Formulated mathematical rules for zero, negative numbers, and solving linear Diophantine equations.", 
+                mechanism: ["Linear Diophantine: ax + by = c", "Solution exists only if gcd(a, b) divides c", "Bedrock of modern modular arithmetic."] }
             ]
           },
           {
             era: "The Math Theorists (1600 - 1800s)",
             items: [
-              { year: "1640", name: "Pierre de Fermat", wikiTerm: "Pierre_de_Fermat", url: "https://en.wikipedia.org/wiki/Pierre_de_Fermat", topic: "Fermat's Little Theorem", context: "Provided the mathematical core for modern prime testing algorithms and modular exponentiation used in RSA." },
-              { year: "1736", name: "Leonhard Euler", wikiTerm: "Leonhard_Euler", url: "https://en.wikipedia.org/wiki/Leonhard_Euler", topic: "Euler's Totient Function (ϕ) & Euler's Theorem", context: "The primary engine of the RSA algorithm. Established the mathematical link that allows public and private keys to function as a pair." },
-              { year: "1832", name: "Évariste Galois", wikiTerm: "Évariste_Galois", url: "https://en.wikipedia.org/wiki/%C3%89variste_Galois", topic: "Galois Theory & Finite Fields (GF(p), GF(2^n))", context: "Developed the mathematical bedrock on which the Advanced Encryption Standard (AES) and Elliptic Curve Cryptography (ECC) operate." }
+              { year: "1640", name: "Pierre de Fermat", wikiTerm: "Pierre_de_Fermat", url: "https://en.wikipedia.org/wiki/Pierre_de_Fermat", 
+                topic: "Fermat's Little Theorem", context: "Provided the mathematical core for modern prime testing algorithms and modular exponentiation.", 
+                mechanism: ["If p is prime and gcd(a, p) = 1:", "a^(p-1) ≡ 1 (mod p)", "Basis for Fermat primality test."] },
+              { year: "1736", name: "Leonhard Euler", wikiTerm: "Leonhard_Euler", url: "https://en.wikipedia.org/wiki/Leonhard_Euler", 
+                topic: "Euler's Totient Function (φ)", context: "The primary engine of the RSA algorithm, linking public and private keys.", 
+                mechanism: ["φ(n) = count of integers < n coprime to n", "For primes p, q: φ(p×q) = (p-1)(q-1)", "Euler's Thm: a^φ(n) ≡ 1 (mod n)"] },
+              { year: "1832", name: "Évariste Galois", wikiTerm: "Évariste_Galois", url: "https://en.wikipedia.org/wiki/%C3%89variste_Galois", 
+                topic: "Finite Fields GF(p^n)", context: "Developed the mathematical bedrock on which the Advanced Encryption Standard (AES) and ECC operate.", 
+                mechanism: ["A field with finite elements: GF(2^8)", "Operations done modulo an irreducible polynomial", "Allows byte-level operations in AES MixColumns without overflow."] }
             ]
           },
           {
             era: "Birth of Computing (1910s - 1970s)",
             items: [
-              { year: "1914", name: "Srinivasa Ramanujan", wikiTerm: "Srinivasa_Ramanujan", url: "https://en.wikipedia.org/wiki/Srinivasa_Ramanujan", topic: "Number Theory, Partitions, & Modular Forms", context: "Reached the absolute peak of pure mathematics. His infinite series and formulas indirectly form the base of modern prime number theory." },
-              { year: "1936", name: "Alan Turing", wikiTerm: "Alan_Turing", url: "https://en.wikipedia.org/wiki/Alan_Turing", topic: "Cryptanalysis & The Turing Machine", context: "Cracked the Enigma code during WWII. Laid the theoretical foundation for all modern computing and algorithmic cryptanalysis.", quote: "Machines take me by surprise with great frequency." },
-              { year: "1945", name: "John von Neumann", wikiTerm: "John_von_Neumann", url: "https://en.wikipedia.org/wiki/John_von_Neumann", topic: "Von Neumann Architecture & PRNGs", context: "Designed the architecture for modern computers that execute cryptographic algorithms. Also pioneered early pseudo-random number generators (PRNGs).", quote: "Anyone who considers arithmetical methods of producing random digits is, of course, in a state of sin." },
-              { year: "1949", name: "Claude Shannon", wikiTerm: "Claude_Shannon", url: "https://en.wikipedia.org/wiki/Claude_Shannon", topic: "Information Theory (Confusion & Diffusion)", context: "Father of Information Theory. His paper established the mathematical principles of confusion and diffusion used in all modern symmetric ciphers.", quote: "Information is the resolution of uncertainty." },
-              { year: "1973", name: "Horst Feistel", wikiTerm: "Horst_Feistel", url: "https://en.wikipedia.org/wiki/Horst_Feistel", topic: "The Feistel Network (Lucifer/DES)", context: "Developed the Feistel cipher structure at IBM. This symmetric architecture became the basis for the Data Encryption Standard (DES) and influenced countless block ciphers." }
+              { year: "1914", name: "Srinivasa Ramanujan", wikiTerm: "Srinivasa_Ramanujan", url: "https://en.wikipedia.org/wiki/Srinivasa_Ramanujan", 
+                topic: "Partitions & Modular Forms", context: "Reached the absolute peak of pure mathematics. Formulas form the base of modern prime theory.", 
+                mechanism: ["Explored asymptotic properties of prime numbers.", "Ramanujan primes: R_n", "Modular forms dictate behavior of elliptic curves over complex planes."] },
+              { year: "1936", name: "Alan Turing", wikiTerm: "Alan_Turing", url: "https://en.wikipedia.org/wiki/Alan_Turing", 
+                topic: "The Turing Machine", context: "Cracked the Enigma code. Laid the theoretical foundation for algorithmic cryptanalysis.", 
+                quote: "Machines take me by surprise with great frequency.",
+                mechanism: ["Defined computability: Turing-complete", "Built the 'Bombe' to simulate Enigma rotor states", "Proved limits of computation (Halting Problem)."] },
+              { year: "1945", name: "John von Neumann", wikiTerm: "John_von_Neumann", url: "https://en.wikipedia.org/wiki/John_von_Neumann", 
+                topic: "Von Neumann Architecture & PRNGs", context: "Designed modern computer architecture and pioneered early pseudo-random number generators.", 
+                quote: "Anyone who considers arithmetical methods of producing random digits is, of course, in a state of sin.",
+                mechanism: ["Middle-square method for PRNG:", "1. Take n-digit seed.", "2. Square it to get 2n digits.", "3. Extract middle n digits as random output."] },
+              { year: "1949", name: "Claude Shannon", wikiTerm: "Claude_Shannon", url: "https://en.wikipedia.org/wiki/Claude_Shannon", 
+                topic: "Information Theory", context: "Established mathematical principles of confusion and diffusion used in all modern symmetric ciphers.", 
+                quote: "Information is the resolution of uncertainty.",
+                mechanism: ["H(X) = -Σ P(x) log₂ P(x)", "Confusion: Hide relationship between key and ciphertext (Substitution).", "Diffusion: Spread plaintext bits across ciphertext (Permutation)."] },
+              { year: "1973", name: "Horst Feistel", wikiTerm: "Horst_Feistel", url: "https://en.wikipedia.org/wiki/Horst_Feistel", 
+                topic: "Feistel Network", context: "Developed symmetric architecture at IBM, basis for Data Encryption Standard (DES).", 
+                mechanism: ["Split block: L₀, R₀", "L₁ = R₀", "R₁ = L₀ ⊕ F(R₀, K₀)", "Decryption is exact reverse of encryption."] }
             ]
           },
           {
             era: "The Crypto Revolution (1976 - 1999)",
             items: [
-              { year: "1976", name: "Whitfield Diffie & Martin Hellman", wikiTerm: "Whitfield_Diffie", url: "https://en.wikipedia.org/wiki/Whitfield_Diffie", topic: "Diffie-Hellman Key Exchange (DHKE)", context: "Invented asymmetric cryptography. Solved the key-exchange problem mathematically without prior shared secrets, and conceptualized Man-in-the-Middle (MitM) attacks.", quote: "We stand today on the brink of a revolution in cryptography." },
-              { year: "1977", name: "Rivest, Shamir, & Adleman (RSA)", wikiTerm: "Ron_Rivest", url: "https://en.wikipedia.org/wiki/RSA_(cryptosystem)", topic: "RSA Algorithm", context: "Created the first practical implementation of public-key cryptography using prime factorization. Introduced the square and multiply algorithm for efficiency.", quote: "Cryptography is usually bypassed, not penetrated." },
-              { year: "1985", name: "Taher Elgamal", wikiTerm: "Taher_Elgamal", url: "https://en.wikipedia.org/wiki/Taher_Elgamal", topic: "ElGamal Encryption", context: "Extended DHKE into an encryption system based on the Discrete Logarithm problem. Formed the basis for the US Digital Signature Algorithm (DSA)." },
-              { year: "1994", name: "Peter Shor", wikiTerm: "Peter_Shor", url: "https://en.wikipedia.org/wiki/Peter_Shor", topic: "Shor's Algorithm", context: "Proved that a sufficiently powerful quantum computer can factor large numbers in polynomial time, effectively threatening RSA, ECC, and DHKE.", quote: "If computers that you build are quantum, Then spies of all factions will want 'em." },
-              { year: "1996", name: "Lov Grover", wikiTerm: "Lov_Grover", url: "https://en.wikipedia.org/wiki/Lov_Grover", topic: "Grover's Algorithm", context: "Invented a quantum database search algorithm. Forces symmetric ciphers like AES to double their key sizes to maintain security." },
-              { year: "1998", name: "Joan Daemen & Vincent Rijmen", wikiTerm: "Joan_Daemen", url: "https://en.wikipedia.org/wiki/Advanced_Encryption_Standard", topic: "Advanced Encryption Standard (AES)", context: "Designed the modern block cipher standard using a Substitution-Permutation Network and Galois Fields, currently securing billions of devices globally." },
-              { year: "1999", name: "Christof Paar", wikiTerm: "Christof_Paar", url: "https://en.wikipedia.org/wiki/Christof_Paar", topic: "Side-Channel Attacks", context: "Proved that while mathematics might be secure, physical implementations leak keys through power consumption (Power Analysis) or execution time.", quote: "You don't need to break the math if you can break the implementation." }
+              { year: "1976", name: "Whitfield Diffie & Martin Hellman", wikiTerm: "Whitfield_Diffie", url: "https://en.wikipedia.org/wiki/Whitfield_Diffie", 
+                topic: "Diffie-Hellman Key Exchange", context: "Invented asymmetric crypto. Solved the key-exchange problem without prior shared secrets.", 
+                quote: "We stand today on the brink of a revolution in cryptography.",
+                mechanism: ["Public parameters: p (prime), g (base)", "Alice sends: A = g^a mod p", "Bob sends: B = g^b mod p", "Shared Secret: S = B^a = A^b = g^(ab) mod p"] },
+              { year: "1977", name: "Rivest, Shamir, & Adleman", wikiTerm: "Ron_Rivest", url: "https://en.wikipedia.org/wiki/RSA_(cryptosystem)", 
+                topic: "RSA Algorithm", context: "Created the first practical implementation of public-key cryptography using prime factorization.", 
+                quote: "Cryptography is usually bypassed, not penetrated.",
+                mechanism: ["1. Pick primes p, q. N = p×q", "2. φ(N) = (p-1)(q-1)", "3. Key pair: e × d ≡ 1 mod φ(N)", "4. Encrypt: C = M^e mod N", "5. Decrypt: M = C^d mod N"] },
+              { year: "1985", name: "Taher Elgamal", wikiTerm: "Taher_Elgamal", url: "https://en.wikipedia.org/wiki/Taher_Elgamal", 
+                topic: "ElGamal Encryption", context: "Extended DHKE into an encryption system based on the Discrete Logarithm problem.", 
+                mechanism: ["Public key: (p, g, h = g^x)", "Encrypt M with random k:", "C₁ = g^k mod p", "C₂ = M × h^k mod p", "Decrypt: M = C₂ / (C₁^x) mod p"] },
+              { year: "1994", name: "Peter Shor", wikiTerm: "Peter_Shor", url: "https://en.wikipedia.org/wiki/Peter_Shor", 
+                topic: "Shor's Algorithm", context: "Proved that a quantum computer can factor large numbers in polynomial time, threatening RSA.", 
+                quote: "If computers that you build are quantum, Then spies of all factions will want 'em.",
+                mechanism: ["Uses Quantum Fourier Transform (QFT).", "Finds period 'r' of function f(x) = a^x mod N", "If r is even, factors of N are gcd(a^(r/2) ± 1, N).", "Drops RSA factor time from Exponential to Polynomial."] },
+              { year: "1998", name: "Joan Daemen & Vincent Rijmen", wikiTerm: "Joan_Daemen", url: "https://en.wikipedia.org/wiki/Advanced_Encryption_Standard", 
+                topic: "AES (Rijndael)", context: "Designed modern block cipher standard using SPN and Galois Fields.", 
+                mechanism: ["State Matrix (4x4 grid of bytes)", "1. SubBytes (S-Box non-linearity)", "2. ShiftRows (Diffusion)", "3. MixColumns (GF(2^8) matrix multiply)", "4. AddRoundKey (XOR with subkey)"] },
+              { year: "1999", name: "Christof Paar", wikiTerm: "Christof_Paar", url: "https://en.wikipedia.org/wiki/Christof_Paar", 
+                topic: "Side-Channel Attacks", context: "Proved physical implementations leak keys through power consumption or execution time.", 
+                quote: "You don't need to break the math if you can break the implementation.",
+                mechanism: ["Simple Power Analysis (SPA):", "Measure CPU voltage during RSA Decryption.", "Observe difference in power trace between 'Square' and 'Square & Multiply'.", "Extract private key bits directly from hardware."] }
             ]
           },
           {
             era: "The Modern Frontier (2000s - Present)",
             items: [
-              { year: "2002", name: "Agrawal, Kayal, & Saxena", wikiTerm: "Manindra_Agrawal", url: "https://en.wikipedia.org/wiki/AKS_primality_test", topic: "AKS Primality Test", context: "Proved that 'PRIMES is in P'. They created the first unconditional, deterministic polynomial-time algorithm to determine if a number is prime." },
-              { year: "2003", name: "Grigori Perelman", wikiTerm: "Grigori_Perelman", url: "https://en.wikipedia.org/wiki/Grigori_Perelman", topic: "Poincaré Conjecture (Topology)", context: "Demonstrated the pure ethics of a mathematician by solving a Millennium Prize problem and rejecting the $1M reward. Driven by truth, not profit." },
-              { year: "2004", name: "Terence Tao", wikiTerm: "Terence_Tao", url: "https://en.wikipedia.org/wiki/Green%E2%80%93Tao_theorem", topic: "Green-Tao Theorem", context: "Proved that prime numbers contain arbitrarily long arithmetic progressions, revealing deep structural patterns within primes." }
+              { year: "2002", name: "Agrawal, Kayal, & Saxena", wikiTerm: "Manindra_Agrawal", url: "https://en.wikipedia.org/wiki/AKS_primality_test", 
+                topic: "AKS Primality Test", context: "Created the first unconditional, deterministic polynomial-time algorithm to determine if a number is prime.", 
+                mechanism: ["Proved 'PRIMES is in P'.", "Based on generalization of Fermat's theorem:", "(x-a)^n ≡ (x^n - a) (mod n, x^r - 1)", "Checks condition for a small range of 'a' and 'r'."] },
+              { year: "2004", name: "Terence Tao", wikiTerm: "Terence_Tao", url: "https://en.wikipedia.org/wiki/Green%E2%80%93Tao_theorem", 
+                topic: "Green-Tao Theorem", context: "Proved that prime numbers contain arbitrarily long arithmetic progressions.", 
+                mechanism: ["Ex: Sequence of length 3: 3, 5, 7", "Theorem guarantees existence of sequence of length 'k' consisting only of primes.", "Deepens understanding of prime pseudo-randomness."] }
             ]
           }
         ];
 
-        // Component to fetch image from Wikipedia API
+        // API Fetch Method (Restored)
         const WikiImage = ({ wikiTerm, name, year }) => {
             const [imgUrl, setImgUrl] = useState(null);
             const [loading, setLoading] = useState(true);
@@ -130,7 +204,7 @@
             return (
                 <div className="img-container w-full md:w-64 h-56 md:h-auto shrink-0 relative bg-[#0a0f1a] flex flex-col items-center justify-center border-b md:border-b-0 md:border-r border-slate-700/50 rounded-t-2xl md:rounded-l-2xl md:rounded-tr-none overflow-hidden">
                     {loading ? (
-                        <div className="animate-pulse text-slate-600 text-sm font-medium">Scanning...</div>
+                        <div className="animate-pulse text-slate-600 text-sm font-medium">Loading...</div>
                     ) : imgUrl ? (
                         <img src={imgUrl} alt={name} className="w-full h-full object-cover object-top transition-transform duration-500 ease-out group-hover:scale-[1.03] opacity-80 group-hover:opacity-100 absolute inset-0 mix-blend-luminosity md:group-hover:mix-blend-normal" />
                     ) : (
@@ -157,11 +231,9 @@
 
                 class Particle {
                     constructor() {
-                        this.x = Math.random() * canvas.width;
-                        this.y = Math.random() * canvas.height;
+                        this.x = Math.random() * canvas.width; this.y = Math.random() * canvas.height;
                         this.size = Math.random() * 1.5 + 0.5;
-                        this.speedX = Math.random() * 0.5 - 0.25;
-                        this.speedY = Math.random() * 0.5 - 0.25;
+                        this.speedX = Math.random() * 0.5 - 0.25; this.speedY = Math.random() * 0.5 - 0.25;
                     }
                     update() {
                         this.x += this.speedX; this.y += this.speedY;
@@ -173,8 +245,7 @@
                             let distance = Math.sqrt(dx * dx + dy * dy);
                             if (distance < mouse.radius) {
                                 const force = (mouse.radius - distance) / mouse.radius;
-                                this.x -= (dx / distance) * force * 2;
-                                this.y -= (dy / distance) * force * 2;
+                                this.x -= (dx / distance) * force * 2; this.y -= (dy / distance) * force * 2;
                             }
                         }
                     }
@@ -195,16 +266,11 @@
                     for (let i = 0; i < particles.length; i++) {
                         particles[i].update(); particles[i].draw();
                         for (let j = i; j < particles.length; j++) {
-                            const dx = particles[i].x - particles[j].x;
-                            const dy = particles[i].y - particles[j].y;
+                            const dx = particles[i].x - particles[j].x; const dy = particles[i].y - particles[j].y;
                             const distance = Math.sqrt(dx * dx + dy * dy);
                             if (distance < 120) {
-                                ctx.beginPath();
-                                ctx.strokeStyle = `rgba(0, 240, 255, ${0.8 - distance / 120})`;
-                                ctx.lineWidth = 0.5;
-                                ctx.moveTo(particles[i].x, particles[i].y);
-                                ctx.lineTo(particles[j].x, particles[j].y);
-                                ctx.stroke();
+                                ctx.beginPath(); ctx.strokeStyle = `rgba(0, 240, 255, ${0.8 - distance / 120})`;
+                                ctx.lineWidth = 0.5; ctx.moveTo(particles[i].x, particles[i].y); ctx.lineTo(particles[j].x, particles[j].y); ctx.stroke();
                             }
                         }
                     }
@@ -257,32 +323,30 @@
             const rect = cardRef.current.getBoundingClientRect();
             const x = e.clientX - rect.left; const y = e.clientY - rect.top;
             const centerX = rect.width / 2; const centerY = rect.height / 2;
-            const rotateX = ((y - centerY) / centerY) * -4;
-            const rotateY = ((x - centerX) / centerX) * 4;
-            cardRef.current.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.02, 1.02, 1.02)`;
-            cardRef.current.style.boxShadow = `${-rotateY}px ${rotateX}px 25px rgba(0, 240, 255, 0.15)`;
+            const rotateX = ((y - centerY) / centerY) * -3;
+            const rotateY = ((x - centerX) / centerX) * 3;
+            cardRef.current.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
+            cardRef.current.style.boxShadow = `${-rotateY}px ${rotateX}px 30px rgba(0, 240, 255, 0.15)`;
           }, []);
 
           const handleMouseLeave = useCallback(() => {
             if (!cardRef.current || window.innerWidth < 768) return;
-            cardRef.current.style.transform = `perspective(1000px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)`;
+            cardRef.current.style.transform = `perspective(1000px) rotateX(0deg) rotateY(0deg)`;
             cardRef.current.style.boxShadow = `none`;
           }, []);
 
           return (
             <div ref={ref} className={`relative w-full mb-12 transition-all duration-1000 ease-out transform ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-24"}`}>
-              {/* Outer element is an anchor tag to make entire card clickable */}
               <a 
                 href={person.url} target="_blank" rel="noopener noreferrer"
                 ref={cardRef} onMouseMove={handleMouseMove} onMouseLeave={handleMouseLeave}
                 className="tilt-card bg-slate-900/50 backdrop-blur-lg rounded-2xl border border-slate-700/60 hover:border-cyan-400/60 min-w-0 group flex-col md:flex-row cursor-pointer"
               >
-                
                 <WikiImage wikiTerm={person.wikiTerm} name={person.name} year={person.year} />
                 
-                <div className="tilt-card-inner flex-1 p-6 md:p-8 flex flex-col justify-center text-slate-300">
+                <div className="tilt-card-inner flex-1 p-6 md:p-8 flex flex-col justify-center text-slate-300 relative z-10 w-full">
                   <h3 className="text-2xl md:text-3xl font-extrabold text-white mb-5 tracking-tight drop-shadow-md group-hover:text-cyan-300 transition-colors">{person.name}</h3>
-                  <div className="space-y-4 mb-5">
+                  <div className="space-y-4 mb-2">
                     <div className="flex items-start">
                       <TopicIcon />
                       <div className="min-w-0">
@@ -298,8 +362,26 @@
                       </div>
                     </div>
                   </div>
+                  
+                  {/* Expandable Mechanism Section */}
+                  <div className="mechanism-container">
+                      <span className="block text-xs font-bold text-indigo-400 uppercase tracking-widest mb-3">Core Mechanism</span>
+                      <div className="space-y-2 pl-2 border-l border-indigo-500/30">
+                          {person.mechanism.map((step, idx) => (
+                              <div 
+                                key={idx} 
+                                className="mechanism-item flex items-start text-sm text-slate-300 font-mono bg-slate-900/60 rounded px-3 py-2 border border-slate-700/50"
+                                style={{ transitionDelay: `${idx * 100}ms` }}
+                              >
+                                  <CodeIcon />
+                                  <span dangerouslySetInnerHTML={{__html: step}} />
+                              </div>
+                          ))}
+                      </div>
+                  </div>
+
                   {person.quote && (
-                    <div className="mt-auto pt-4 border-t border-slate-700/50 flex gap-3 items-start">
+                    <div className="mt-6 pt-4 border-t border-slate-700/50 flex gap-3 items-start">
                       <QuoteIcon />
                       <p className="text-slate-300 italic font-medium text-sm md:text-[15px] leading-relaxed drop-shadow-sm">"{person.quote}"</p>
                     </div>
@@ -328,7 +410,7 @@
                     </span>
                   </h1>
                   <p className="text-lg md:text-xl text-slate-400 max-w-3xl mx-auto leading-relaxed font-light">
-                    From ancient geometry to quantum algorithms. A chronological look at the pioneers who built the foundations of secure communication. Click any card to read more on Wikipedia.
+                    From ancient geometry to quantum algorithms. Hover over any card to unpack their mathematical construction and core mechanisms.
                   </p>
                 </header>
 
@@ -368,20 +450,6 @@
                     </a>
                   </section>
 
-                  <section className="mt-20 relative rounded-3xl overflow-hidden shadow-[0_0_40px_rgba(0,240,255,0.1)] border border-slate-800">
-                    <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-cryptodark to-cyan-900/20"></div>
-                    <div className="relative z-10 p-8 md:p-16 text-center">
-                      <div className="inline-block mb-6 px-4 py-2 rounded-full bg-slate-900/50 border border-slate-700 text-cyan-300 text-xs font-bold tracking-widest uppercase">
-                        The Ultimate Takeaway
-                      </div>
-                      <h2 className="text-3xl md:text-4xl font-extrabold mb-6 text-white tracking-tight">
-                        Pure Math vs. Flawed Reality
-                      </h2>
-                      <p className="text-lg md:text-xl leading-relaxed text-slate-400 max-w-3xl mx-auto font-light">
-                        "Mathematics has evolved over millennia. From Euclid to Shor, pure math remains flawless. However, vulnerabilities emerge when we implement these concepts on physical machines. A master cryptographer must understand both the pristine mathematics and the flawed machines."
-                      </p>
-                    </div>
-                  </section>
                 </main>
               </div>
             </>
