@@ -1,15 +1,14 @@
 <!DOCTYPE html>
-<html lang="en" class="scroll-smooth">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cryptography Hall of Fame</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>3D Crypto Space Journey</title>
     
-    <meta name="referrer" content="no-referrer" />
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
-            theme: { extend: { colors: { cryptodark: '#050810', cryptocyan: '#00f0ff' } } }
+            theme: { extend: { colors: { cryptodark: '#03050a', cryptocyan: '#00f0ff' } } }
         }
     </script>
     
@@ -18,442 +17,574 @@
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
     <style>
-        body { background-color: #050810; margin: 0; overflow-x: hidden; }
-        ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-track { background: #050810; }
-        ::-webkit-scrollbar-thumb { background: #00f0ff; border-radius: 10px; }
-        
-        .tilt-card { transition: transform 0.1s ease-out, box-shadow 0.3s ease; text-decoration: none; }
-        .glow-text { text-shadow: 0 0 15px rgba(0, 240, 255, 0.6); }
-        .timeline-line { box-shadow: 0 0 15px rgba(0, 240, 255, 0.4); }
-        
-        /* Unpack Animation Styles */
-        .mechanism-container {
-            max-height: 0;
-            opacity: 0;
-            overflow: hidden;
-            transition: max-height 0.6s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.4s ease, margin-top 0.4s ease;
+        html, body { 
+            background-color: #03050a; 
+            margin: 0; 
+            font-family: sans-serif;
+            color: #cbd5e1;
+            overflow-x: hidden;
+            overflow-y: auto; 
+            overscroll-behavior: none;
+            min-height: 100vh;
+        }
+
+        #scroll-track { 
+            position: absolute; 
+            top: 0; left: 0; 
+            width: 1px; 
+            z-index: 1; 
+        }
+
+        /* Binary Warp Background */
+        .space-bg {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: radial-gradient(circle at center, #0a1128 0%, #03050a 100%);
+            z-index: 0; overflow: hidden; perspective: 1200px;
         }
         
-        .tilt-card:hover .mechanism-container {
-            max-height: 600px;
-            opacity: 1;
-            margin-top: 1.5rem;
-            padding-top: 1.5rem;
+        .binary-particle {
+            position: absolute; top: 50%; left: 50%;
+            color: rgba(0, 240, 255, 0.3); font-family: monospace; font-weight: bold;
+            font-size: 20px; text-shadow: 0 0 10px rgba(0, 240, 255, 0.4);
+            transform-style: preserve-3d; opacity: 0;
+            animation: warp-speed linear infinite;
+        }
+
+        @keyframes warp-speed {
+            0% { transform: translate3d(var(--tx), var(--ty), -3000px) scale(0.1); opacity: 0; }
+            20% { opacity: 0.3; }
+            80% { opacity: 0.5; }
+            100% { transform: translate3d(var(--tx), var(--ty), 1000px) scale(2); opacity: 0; }
+        }
+
+        /* 3D Engine Setup */
+        #viewport {
+            perspective: 800px;
+            width: 100vw; height: 100vh;
+            position: fixed; top: 0; left: 0;
+            overflow: hidden; z-index: 10; pointer-events: none;
+        }
+
+        #camera {
+            transform-style: preserve-3d; width: 100%; height: 100%;
+            will-change: transform;
+            transform: translateZ(-3000px) rotateX(60deg); 
+        }
+
+        .map-unrolling #camera {
+            transition: transform 2.5s cubic-bezier(0.25, 1, 0.5, 1);
+            transform: translateZ(0px) rotateX(0deg);
+        }
+        .map-active #camera { transition: none; }
+
+        #world {
+            transform-style: preserve-3d; position: absolute;
+            top: 50%; left: 50%; width: 0; height: 0;
+        }
+
+        /* Centered Node */
+        .milestone-node {
+            position: absolute; transform-style: preserve-3d;
+            width: 640px; margin-left: -320px; margin-top: -150px;
+            will-change: transform, opacity; pointer-events: auto;
+            transition: border-color 0.3s ease;
+        }
+
+        @media (max-width: 768px) {
+            .milestone-node { width: 90vw; margin-left: -45vw; }
+        }
+
+        /* Hover Sparks Wrapper */
+        .spark-wrapper {
+            position: relative; border-radius: 1rem; padding: 2px; 
+            background: rgba(10, 15, 26, 0.85); overflow: hidden;
+            box-shadow: 0 15px 40px -10px rgba(0, 0, 0, 0.9);
+            transform-style: preserve-3d; transition: transform 0.1s ease-out;
+        }
+
+        .spark-wrapper::before {
+            content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%;
+            background: conic-gradient(transparent, transparent, transparent, #00f0ff, transparent 20%);
+            animation: spin 2s linear infinite; opacity: 0; transition: opacity 0.3s ease; pointer-events: none;
+        }
+
+        .milestone-node:hover .spark-wrapper::before { opacity: 1; }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+
+        .tilt-card-inner {
+            background: rgba(10, 15, 26, 0.95); border-radius: calc(1rem - 2px);
+            display: flex; flex-direction: column; overflow: hidden;
+            height: 100%; position: relative; z-index: 1;
+        }
+
+        .mechanism-container {
+            max-height: 0; opacity: 0; overflow: hidden;
+            transition: max-height 0.6s ease, opacity 0.4s ease, margin-top 0.4s ease;
+        }
+        
+        .milestone-node:hover .mechanism-container {
+            max-height: 600px; opacity: 1; margin-top: 1rem; padding-top: 1rem;
             border-top: 1px solid rgba(51, 65, 85, 0.5);
         }
 
-        .mechanism-item {
-            opacity: 0;
-            transform: translateX(20px);
-            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        .tilt-card:hover .mechanism-item {
-            opacity: 1;
-            transform: translateX(0);
-        }
-
         @media (min-width: 768px) {
-            .tilt-card { transform-style: preserve-3d; display: flex; }
-            .tilt-card-inner { transform: translateZ(30px); }
-            .img-container { transform-style: preserve-3d; }
-            .img-container img { transform: translateZ(15px); }
+            .tilt-card-inner { flex-direction: row; }
+            .img-wrapper { width: 220px; border-right: 1px solid rgba(51,65,85,0.5); }
+        }
+        @media (max-width: 767px) {
+            .img-wrapper { height: 180px; width: 100%; border-bottom: 1px solid rgba(51,65,85,0.5); }
+        }
+
+        /* Animated 3D Subtle SVG Path */
+        .svg-path-3d {
+            position: absolute; top: 0; left: -2000px;
+            width: 4000px; height: 100%;
+            transform: translateZ(0px); 
+            transform-origin: top center; pointer-events: none; z-index: -1;
+        }
+        
+        .path-line {
+            stroke-dasharray: 20, 30;
+            animation: flow-line 1s linear infinite;
+        }
+
+        @keyframes flow-line {
+            to { stroke-dashoffset: -50; }
+        }
+
+        /* 3D Guiding Spirit (In-World) */
+        #spirit-3d {
+            position: absolute;
+            width: 150px; height: 150px;
+            margin-left: -75px; margin-top: -75px;
+            transform-style: preserve-3d;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            will-change: transform;
+            z-index: 20;
+            pointer-events: none;
+        }
+
+        .spirit-year {
+            color: #00f0ff; font-weight: 900; font-size: 2.5rem; letter-spacing: 0.1em;
+            text-shadow: 0 0 20px #00f0ff, 0 0 40px rgba(0,240,255,0.5);
+            font-family: monospace;
+            transform: translateZ(50px);
+        }
+
+        .guiding-flame {
+            width: 14px; height: 14px; border-radius: 50%;
+            background: #ffffff;
+            box-shadow: 0 0 20px 8px #00f0ff, 0 0 50px 20px rgba(0, 240, 255, 0.8);
+            margin-top: 15px;
+            animation: pulse-flame 1s infinite alternate;
+        }
+
+        @keyframes pulse-flame {
+            0% { transform: scale(1); opacity: 0.8; }
+            100% { transform: scale(1.5); opacity: 1; }
+        }
+        
+        .intro-overlay {
+            position: fixed; inset: 0; z-index: 50;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            background: #03050a; transition: opacity 1s ease;
+        }
+        
+        .video-badge {
+            animation: pulse-border 2s infinite;
+        }
+        @keyframes pulse-border {
+            0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
         }
     </style>
 </head>
-<body class="text-slate-300 font-sans selection:bg-cyan-900 selection:text-cyan-100">
+<body>
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useEffect, useRef, useCallback } = React;
+        const { useState, useEffect, useRef, useMemo } = React;
 
-        const QuoteIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 text-cyan-400 opacity-60 shrink-0 mt-1"><path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10h-9.983zm-14.017 0v-7.391c0-5.704 3.748-9.57 9-10.609l.996 2.151c-2.433.917-3.996 3.638-3.996 5.849h3.983v10h-9.983z" /></svg>;
-        const TopicIcon = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 mr-3 text-cyan-400 shrink-0"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>;
-        const ImpactIcon = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 mr-3 text-emerald-400 shrink-0"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>;
-        const CodeIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-cyan-500 mr-2 shrink-0 mt-0.5"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>;
+        const QuoteIcon = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 text-cyan-400 opacity-60 shrink-0 mt-0.5"><path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10h-9.983zm-14.017 0v-7.391c0-5.704 3.748-9.57 9-10.609l.996 2.151c-2.433.917-3.996 3.638-3.996 5.849h3.983v10h-9.983z" /></svg>;
+        const TopicIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 mr-2 text-cyan-400 shrink-0"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>;
+        const ImpactIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 mr-2 text-emerald-400 shrink-0"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>;
+        const CodeIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-cyan-500 mr-2 shrink-0 mt-0.5"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>;
+        const YoutubeIcon = () => <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 text-red-500 mr-2"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>;
 
-        const chronologicalData = [
-          {
-            era: "The Perspective",
-            items: [
-              { year: "1990", name: "Carl Sagan", wikiTerm: "Carl_Sagan", url: "https://en.wikipedia.org/wiki/Carl_Sagan", 
-                topic: "The Pale Blue Dot", context: "Before the modern internet boom, reminded humanity of our scale. A philosophical anchor for why we protect data.", 
-                quote: "Look again at that dot. That's here. That's home. That's us.",
-                mechanism: ["Information is the universe's way of organizing chaos.", "Cryptography preserves this order locally against universal entropy."] }
-            ]
-          },
-          {
-            era: "Ancient Foundations (300 BC - 600 AD)",
-            items: [
-              { year: "~300 BC", name: "Euclid", wikiTerm: "Euclid", url: "https://en.wikipedia.org/wiki/Euclid", 
-                topic: "Euclidean Algorithm", context: "Established the mathematical foundation required to compute the Modulo Inverse, crucial for RSA.", 
-                mechanism: ["gcd(a, b) = gcd(b, a mod b)", "Extended form solves: ax + by = gcd(a, b)", "Used to find private key 'd' in RSA."] },
-              { year: "~276 BC", name: "Eratosthenes", wikiTerm: "Eratosthenes", url: "https://en.wikipedia.org/wiki/Eratosthenes", 
-                topic: "Sieve of Eratosthenes", context: "Created the first systematic algorithm for finding prime numbers.", 
-                mechanism: ["1. List integers from 2 to n.", "2. Cross out all multiples of 2.", "3. Cross out multiples of next available number.", "4. Remaining numbers are prime."] },
-              { year: "~3rd Cent.", name: "Sun Tzu", wikiTerm: "Sunzi_Suanjing", url: "https://en.wikipedia.org/wiki/Sunzi_Suanjing", 
-                topic: "Chinese Remainder Theorem", context: "Mathematical theorem used today to accelerate real-world RSA decryption by roughly 4x.", 
-                mechanism: ["x ≡ a₁ (mod m₁), x ≡ a₂ (mod m₂)", "Let M = m₁ × m₂", "Solution x exists mod M if gcd(m₁, m₂) = 1", "Speeds up decryption using factors p and q."] },
-              { year: "598 AD", name: "Brahmagupta", wikiTerm: "Brahmagupta", url: "https://en.wikipedia.org/wiki/Brahmagupta", 
-                topic: "Brahmasphutasiddhanta", context: "Formulated mathematical rules for zero, negative numbers, and solving linear Diophantine equations.", 
-                mechanism: ["Linear Diophantine: ax + by = c", "Solution exists only if gcd(a, b) divides c", "Bedrock of modern modular arithmetic."] }
-            ]
-          },
-          {
-            era: "The Math Theorists (1600 - 1800s)",
-            items: [
-              { year: "1640", name: "Pierre de Fermat", wikiTerm: "Pierre_de_Fermat", url: "https://en.wikipedia.org/wiki/Pierre_de_Fermat", 
-                topic: "Fermat's Little Theorem", context: "Provided the mathematical core for modern prime testing algorithms and modular exponentiation.", 
-                mechanism: ["If p is prime and gcd(a, p) = 1:", "a^(p-1) ≡ 1 (mod p)", "Basis for Fermat primality test."] },
-              { year: "1736", name: "Leonhard Euler", wikiTerm: "Leonhard_Euler", url: "https://en.wikipedia.org/wiki/Leonhard_Euler", 
-                topic: "Euler's Totient Function (φ)", context: "The primary engine of the RSA algorithm, linking public and private keys.", 
-                mechanism: ["φ(n) = count of integers < n coprime to n", "For primes p, q: φ(p×q) = (p-1)(q-1)", "Euler's Thm: a^φ(n) ≡ 1 (mod n)"] },
-              { year: "1832", name: "Évariste Galois", wikiTerm: "Évariste_Galois", url: "https://en.wikipedia.org/wiki/%C3%89variste_Galois", 
-                topic: "Finite Fields GF(p^n)", context: "Developed the mathematical bedrock on which the Advanced Encryption Standard (AES) and ECC operate.", 
-                mechanism: ["A field with finite elements: GF(2^8)", "Operations done modulo an irreducible polynomial", "Allows byte-level operations in AES MixColumns without overflow."] }
-            ]
-          },
-          {
-            era: "Birth of Computing (1910s - 1970s)",
-            items: [
-              { year: "1914", name: "Srinivasa Ramanujan", wikiTerm: "Srinivasa_Ramanujan", url: "https://en.wikipedia.org/wiki/Srinivasa_Ramanujan", 
-                topic: "Partitions & Modular Forms", context: "Reached the absolute peak of pure mathematics. Formulas form the base of modern prime theory.", 
-                mechanism: ["Explored asymptotic properties of prime numbers.", "Ramanujan primes: R_n", "Modular forms dictate behavior of elliptic curves over complex planes."] },
-              { year: "1936", name: "Alan Turing", wikiTerm: "Alan_Turing", url: "https://en.wikipedia.org/wiki/Alan_Turing", 
-                topic: "The Turing Machine", context: "Cracked the Enigma code. Laid the theoretical foundation for algorithmic cryptanalysis.", 
-                quote: "Machines take me by surprise with great frequency.",
-                mechanism: ["Defined computability: Turing-complete", "Built the 'Bombe' to simulate Enigma rotor states", "Proved limits of computation (Halting Problem)."] },
-              { year: "1945", name: "John von Neumann", wikiTerm: "John_von_Neumann", url: "https://en.wikipedia.org/wiki/John_von_Neumann", 
-                topic: "Von Neumann Architecture & PRNGs", context: "Designed modern computer architecture and pioneered early pseudo-random number generators.", 
-                quote: "Anyone who considers arithmetical methods of producing random digits is, of course, in a state of sin.",
-                mechanism: ["Middle-square method for PRNG:", "1. Take n-digit seed.", "2. Square it to get 2n digits.", "3. Extract middle n digits as random output."] },
-              { year: "1949", name: "Claude Shannon", wikiTerm: "Claude_Shannon", url: "https://en.wikipedia.org/wiki/Claude_Shannon", 
-                topic: "Information Theory", context: "Established mathematical principles of confusion and diffusion used in all modern symmetric ciphers.", 
-                quote: "Information is the resolution of uncertainty.",
-                mechanism: ["H(X) = -Σ P(x) log₂ P(x)", "Confusion: Hide relationship between key and ciphertext (Substitution).", "Diffusion: Spread plaintext bits across ciphertext (Permutation)."] },
-              { year: "1973", name: "Horst Feistel", wikiTerm: "Horst_Feistel", url: "https://en.wikipedia.org/wiki/Horst_Feistel", 
-                topic: "Feistel Network", context: "Developed symmetric architecture at IBM, basis for Data Encryption Standard (DES).", 
-                mechanism: ["Split block: L₀, R₀", "L₁ = R₀", "R₁ = L₀ ⊕ F(R₀, K₀)", "Decryption is exact reverse of encryption."] }
-            ]
-          },
-          {
-            era: "The Crypto Revolution (1976 - 1999)",
-            items: [
-              { year: "1976", name: "Whitfield Diffie & Martin Hellman", wikiTerm: "Whitfield_Diffie", url: "https://en.wikipedia.org/wiki/Whitfield_Diffie", 
-                topic: "Diffie-Hellman Key Exchange", context: "Invented asymmetric crypto. Solved the key-exchange problem without prior shared secrets.", 
-                quote: "We stand today on the brink of a revolution in cryptography.",
-                mechanism: ["Public parameters: p (prime), g (base)", "Alice sends: A = g^a mod p", "Bob sends: B = g^b mod p", "Shared Secret: S = B^a = A^b = g^(ab) mod p"] },
-              { year: "1977", name: "Rivest, Shamir, & Adleman", wikiTerm: "Ron_Rivest", url: "https://en.wikipedia.org/wiki/RSA_(cryptosystem)", 
-                topic: "RSA Algorithm", context: "Created the first practical implementation of public-key cryptography using prime factorization.", 
-                quote: "Cryptography is usually bypassed, not penetrated.",
-                mechanism: ["1. Pick primes p, q. N = p×q", "2. φ(N) = (p-1)(q-1)", "3. Key pair: e × d ≡ 1 mod φ(N)", "4. Encrypt: C = M^e mod N", "5. Decrypt: M = C^d mod N"] },
-              { year: "1985", name: "Taher Elgamal", wikiTerm: "Taher_Elgamal", url: "https://en.wikipedia.org/wiki/Taher_Elgamal", 
-                topic: "ElGamal Encryption", context: "Extended DHKE into an encryption system based on the Discrete Logarithm problem.", 
-                mechanism: ["Public key: (p, g, h = g^x)", "Encrypt M with random k:", "C₁ = g^k mod p", "C₂ = M × h^k mod p", "Decrypt: M = C₂ / (C₁^x) mod p"] },
-              { year: "1994", name: "Peter Shor", wikiTerm: "Peter_Shor", url: "https://en.wikipedia.org/wiki/Peter_Shor", 
-                topic: "Shor's Algorithm", context: "Proved that a quantum computer can factor large numbers in polynomial time, threatening RSA.", 
-                quote: "If computers that you build are quantum, Then spies of all factions will want 'em.",
-                mechanism: ["Uses Quantum Fourier Transform (QFT).", "Finds period 'r' of function f(x) = a^x mod N", "If r is even, factors of N are gcd(a^(r/2) ± 1, N).", "Drops RSA factor time from Exponential to Polynomial."] },
-              { year: "1998", name: "Joan Daemen & Vincent Rijmen", wikiTerm: "Joan_Daemen", url: "https://en.wikipedia.org/wiki/Advanced_Encryption_Standard", 
-                topic: "AES (Rijndael)", context: "Designed modern block cipher standard using SPN and Galois Fields.", 
-                mechanism: ["State Matrix (4x4 grid of bytes)", "1. SubBytes (S-Box non-linearity)", "2. ShiftRows (Diffusion)", "3. MixColumns (GF(2^8) matrix multiply)", "4. AddRoundKey (XOR with subkey)"] },
-              { year: "1999", name: "Christof Paar", wikiTerm: "Christof_Paar", url: "https://en.wikipedia.org/wiki/Christof_Paar", 
-                topic: "Side-Channel Attacks", context: "Proved physical implementations leak keys through power consumption or execution time.", 
-                quote: "You don't need to break the math if you can break the implementation.",
-                mechanism: ["Simple Power Analysis (SPA):", "Measure CPU voltage during RSA Decryption.", "Observe difference in power trace between 'Square' and 'Square & Multiply'.", "Extract private key bits directly from hardware."] }
-            ]
-          },
-          {
-            era: "The Modern Frontier (2000s - Present)",
-            items: [
-              { year: "2002", name: "Agrawal, Kayal, & Saxena", wikiTerm: "Manindra_Agrawal", url: "https://en.wikipedia.org/wiki/AKS_primality_test", 
-                topic: "AKS Primality Test", context: "Created the first unconditional, deterministic polynomial-time algorithm to determine if a number is prime.", 
-                mechanism: ["Proved 'PRIMES is in P'.", "Based on generalization of Fermat's theorem:", "(x-a)^n ≡ (x^n - a) (mod n, x^r - 1)", "Checks condition for a small range of 'a' and 'r'."] },
-              { year: "2004", name: "Terence Tao", wikiTerm: "Terence_Tao", url: "https://en.wikipedia.org/wiki/Green%E2%80%93Tao_theorem", 
-                topic: "Green-Tao Theorem", context: "Proved that prime numbers contain arbitrarily long arithmetic progressions.", 
-                mechanism: ["Ex: Sequence of length 3: 3, 5, 7", "Theorem guarantees existence of sequence of length 'k' consisting only of primes.", "Deepens understanding of prime pseudo-randomness."] }
-            ]
-          }
+        const journeyData = [
+            { id: 0, category: "The Perspective", year: "1990", name: "Carl Sagan", wikiTerm: "Carl_Sagan", url: "https://en.wikipedia.org/wiki/Carl_Sagan", topic: "The Pale Blue Dot", context: "Reminded humanity of our scale. A philosophical anchor for protecting data.", quote: "Look again at that dot. That's here. That's home.", mechanism: ["Information organizes chaos.", "Cryptography preserves local order."] },
+            { id: 1, category: "Ancient Foundations", year: "300 BC", name: "Euclid", wikiTerm: "Euclid", url: "https://en.wikipedia.org/wiki/Euclid", topic: "Euclidean Algorithm", context: "Mathematical foundation for Modulo Inverse, crucial for RSA.", mechanism: ["gcd(a, b) = gcd(b, a mod b)", "ax + by = gcd(a, b)"] },
+            { id: 2, category: "Ancient Foundations", year: "276 BC", name: "Eratosthenes", wikiTerm: "Eratosthenes", url: "https://en.wikipedia.org/wiki/Eratosthenes", topic: "Sieve of Eratosthenes", context: "First systematic algorithm for finding prime numbers.", mechanism: ["1. List integers.", "2. Cross out multiples.", "3. Remaining are prime."] },
+            { id: 3, category: "Ancient Foundations", year: "598", name: "Brahmagupta", wikiTerm: "Brahmagupta", url: "https://en.wikipedia.org/wiki/Brahmagupta", topic: "Brahmasphutasiddhanta", context: "Rules for zero, negatives, and Diophantine equations.", mechanism: ["Linear Diophantine: ax + by = c", "Bedrock of modular arithmetic."] },
+            { id: 4, category: "Math Theorists", year: "1640", name: "Pierre de Fermat", wikiTerm: "Pierre_de_Fermat", url: "https://en.wikipedia.org/wiki/Pierre_de_Fermat", topic: "Fermat's Little Theorem", context: "Core for modern prime testing and modular exponentiation.", mechanism: ["If p is prime:", "a^(p-1) ≡ 1 (mod p)"] },
+            { id: 5, category: "Math Theorists", year: "1736", name: "Leonhard Euler", wikiTerm: "Leonhard_Euler", url: "https://en.wikipedia.org/wiki/Leonhard_Euler", topic: "Euler's Totient Function", context: "Engine of the RSA algorithm.", mechanism: ["φ(p×q) = (p-1)(q-1)", "a^φ(n) ≡ 1 (mod n)"] },
+            { id: 6, category: "Math Theorists", year: "1832", name: "Évariste Galois", wikiTerm: "Évariste_Galois", url: "https://en.wikipedia.org/wiki/%C3%89variste_Galois", topic: "Finite Fields", context: "Mathematical bedrock for AES and ECC.", mechanism: ["GF(2^8) math without overflow."] },
+            { id: 7, category: "Birth of Computing", year: "1914", name: "Srinivasa Ramanujan", wikiTerm: "Srinivasa_Ramanujan", url: "https://en.wikipedia.org/wiki/Srinivasa_Ramanujan", topic: "Partitions & Modular Forms", context: "Infinite series form the base of modern prime theory.", mechanism: ["Asymptotic properties of primes."] },
+            { id: 8, category: "Birth of Computing", year: "1936", name: "Alan Turing", wikiTerm: "Alan_Turing", url: "https://en.wikipedia.org/wiki/Alan_Turing", topic: "The Turing Machine", context: "Cracked Enigma. Foundation of computability.", mechanism: ["Turing-complete logic."] },
+            { id: 9, category: "Birth of Computing", year: "1949", name: "Claude Shannon", wikiTerm: "Claude_Shannon", url: "https://en.wikipedia.org/wiki/Claude_Shannon", topic: "Information Theory", context: "Principles of confusion and diffusion.", mechanism: ["Confusion (Substitution)", "Diffusion (Permutation)"] },
+            { id: 10, category: "Crypto Revolution", year: "1976", name: "Diffie & Hellman", wikiTerm: "Whitfield_Diffie", url: "https://en.wikipedia.org/wiki/Whitfield_Diffie", topic: "DH Key Exchange", context: "Invented asymmetric crypto without shared secrets.", mechanism: ["S = B^a = A^b = g^(ab) mod p"] },
+            { id: 11, category: "Crypto Revolution", year: "1977", name: "Rivest, Shamir, Adleman", wikiTerm: "Ron_Rivest", url: "https://en.wikipedia.org/wiki/RSA_(cryptosystem)", topic: "RSA Algorithm", context: "First practical public-key cryptography.", mechanism: ["C = M^e mod N", "M = C^d mod N"] },
+            { id: 12, category: "Crypto Revolution", year: "1994", name: "Peter Shor", wikiTerm: "Peter_Shor", url: "https://en.wikipedia.org/wiki/Peter_Shor", topic: "Shor's Algorithm", context: "Quantum factoring threatening RSA.", mechanism: ["Quantum Fourier Transform."] },
+            { id: 13, category: "Modern Frontier", year: "2002", name: "AKS Team", wikiTerm: "Manindra_Agrawal", url: "https://en.wikipedia.org/wiki/AKS_primality_test", topic: "AKS Primality Test", context: "Proved PRIMES is in P unconditionally.", mechanism: ["(x-a)^n ≡ (x^n - a) mod n"] },
+            { id: 14, category: "Modern Frontier", year: "2004", name: "Terence Tao", wikiTerm: "Terence_Tao", url: "https://en.wikipedia.org/wiki/Terence_Tao", topic: "Green-Tao Theorem", context: "Proved that prime numbers contain arbitrarily long arithmetic progressions.", mechanism: ["Sequence of length 'k' consisting only of primes."] },
+            { id: 15, category: "The Illusion of Knowledge", year: "Present", name: "Richard Feynman", wikiTerm: "Richard_Feynman", url: "https://www.youtube.com/results?search_query=Richard+Feynman+Names+Don%27t+Constitute+Knowledge", topic: "Names Don't Constitute Knowledge", context: "Knowing the name of something doesn't mean you understand it.", quote: "You can know the name of that bird in all the languages of the world, but you'll know absolutely nothing whatever about the bird.", mechanism: ["Focus on the mechanics, not just the terminology."], isVideo: true }
         ];
 
-        // API Fetch Method (Restored)
-        const WikiImage = ({ wikiTerm, name, year }) => {
-            const [imgUrl, setImgUrl] = useState(null);
-            const [loading, setLoading] = useState(true);
+        const Z_SPACING = 2500; 
 
+        // Year Parsing logic for smooth counter
+        const parseYear = (str) => {
+            if (!str) return 0;
+            if (str === "Present") return 2026;
+            let num = parseInt(str.replace(/[^0-9]/g, ''));
+            if (str.includes("BC")) return -num;
+            return num;
+        };
+
+        const formatYear = (num) => {
+            let r = Math.round(num);
+            if (r >= 2026) return "Present";
+            if (r < 0) return `${Math.abs(r)} BC`;
+            if (r >= 0 && r < 1000) return `${r} AD`;
+            return `${r}`;
+        };
+
+        const WikiImage = ({ wikiTerm, name }) => {
+            const [imgUrl, setImgUrl] = useState(null);
+            
             useEffect(() => {
-                const fetchImg = async () => {
-                    try {
-                        const res = await fetch(`https://en.wikipedia.org/w/api.php?action=query&titles=${wikiTerm}&prop=pageimages&format=json&pithumbsize=600&origin=*`);
-                        const data = await res.json();
+                if(!wikiTerm) return;
+                fetch(`https://en.wikipedia.org/w/api.php?action=query&titles=${wikiTerm}&prop=pageimages&format=json&pithumbsize=600&origin=*`)
+                    .then(r => r.json())
+                    .then(data => {
                         const pages = data.query.pages;
                         const pageId = Object.keys(pages)[0];
                         if (pageId !== "-1" && pages[pageId].thumbnail) {
                             setImgUrl(pages[pageId].thumbnail.source);
                         }
-                    } catch (e) {
-                        console.error("Image fetch failed for", wikiTerm);
-                    } finally {
-                        setLoading(false);
-                    }
-                };
-                fetchImg();
+                    }).catch(e => console.error(e));
             }, [wikiTerm]);
 
             return (
-                <div className="img-container w-full md:w-64 h-56 md:h-auto shrink-0 relative bg-[#0a0f1a] flex flex-col items-center justify-center border-b md:border-b-0 md:border-r border-slate-700/50 rounded-t-2xl md:rounded-l-2xl md:rounded-tr-none overflow-hidden">
-                    {loading ? (
-                        <div className="animate-pulse text-slate-600 text-sm font-medium">Loading...</div>
-                    ) : imgUrl ? (
-                        <img src={imgUrl} alt={name} className="w-full h-full object-cover object-top transition-transform duration-500 ease-out group-hover:scale-[1.03] opacity-80 group-hover:opacity-100 absolute inset-0 mix-blend-luminosity md:group-hover:mix-blend-normal" />
+                <div className="img-wrapper relative shrink-0 overflow-hidden bg-slate-900 rounded-t-2xl md:rounded-l-2xl md:rounded-tr-none flex items-center justify-center">
+                    {imgUrl ? (
+                        <img src={imgUrl} alt={name} className="w-full h-full object-cover object-top opacity-90 transition-opacity hover:opacity-100" />
                     ) : (
-                        <img src={`https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=0a0f1a&color=00f0ff&size=512&font-size=0.33`} alt={name} className="w-full h-full object-cover opacity-60 absolute inset-0" />
+                        <div className="w-full h-full flex items-center justify-center bg-slate-800 text-cyan-500 animate-pulse text-xs font-mono">Fetching Data...</div>
                     )}
-                    <div className="absolute top-3 left-3 bg-cryptodark/80 px-2 py-1 rounded text-xs font-mono text-cyan-400 border border-cyan-500/30 z-10">{year}</div>
                 </div>
             );
         };
 
-        const CanvasBackground = () => {
-            const canvasRef = useRef(null);
-            useEffect(() => {
-                const canvas = canvasRef.current;
-                const ctx = canvas.getContext('2d');
-                let animationFrameId;
-                let particles = [];
-                let mouse = { x: null, y: null, radius: 120 };
+        const MilestoneCard = ({ person }) => {
+            const cardRef = useRef(null);
 
-                const resize = () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; init(); };
-                window.addEventListener('resize', resize);
-                window.addEventListener('mousemove', (e) => { mouse.x = e.x; mouse.y = e.y; });
-                window.addEventListener('mouseout', () => { mouse.x = null; mouse.y = null; });
+            const handleMouseMove = (e) => {
+                if (!cardRef.current || window.innerWidth < 768) return; 
+                const rect = cardRef.current.getBoundingClientRect();
+                const x = e.clientX - rect.left; const y = e.clientY - rect.top;
+                const centerX = rect.width / 2; const centerY = rect.height / 2;
+                const rotateX = ((y - centerY) / centerY) * -5;
+                const rotateY = ((x - centerX) / centerX) * 5;
+                cardRef.current.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
+            };
 
-                class Particle {
-                    constructor() {
-                        this.x = Math.random() * canvas.width; this.y = Math.random() * canvas.height;
-                        this.size = Math.random() * 1.5 + 0.5;
-                        this.speedX = Math.random() * 0.5 - 0.25; this.speedY = Math.random() * 0.5 - 0.25;
-                    }
-                    update() {
-                        this.x += this.speedX; this.y += this.speedY;
-                        if (this.x > canvas.width || this.x < 0) this.speedX = -this.speedX;
-                        if (this.y > canvas.height || this.y < 0) this.speedY = -this.speedY;
+            const handleMouseLeave = () => {
+                if (!cardRef.current || window.innerWidth < 768) return;
+                cardRef.current.style.transform = `perspective(1000px) rotateX(0deg) rotateY(0deg)`;
+            };
 
-                        if (mouse.x && mouse.y) {
-                            let dx = mouse.x - this.x; let dy = mouse.y - this.y;
-                            let distance = Math.sqrt(dx * dx + dy * dy);
-                            if (distance < mouse.radius) {
-                                const force = (mouse.radius - distance) / mouse.radius;
-                                this.x -= (dx / distance) * force * 2; this.y -= (dy / distance) * force * 2;
-                            }
-                        }
-                    }
-                    draw() {
-                        ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-                        ctx.fillStyle = 'rgba(0, 240, 255, 0.4)'; ctx.fill();
-                    }
-                }
-
-                const init = () => {
-                    particles = [];
-                    const numParticles = (canvas.width * canvas.height) / 15000;
-                    for (let i = 0; i < numParticles; i++) particles.push(new Particle());
-                };
-
-                const animate = () => {
-                    ctx.clearRect(0, 0, canvas.width, canvas.height);
-                    for (let i = 0; i < particles.length; i++) {
-                        particles[i].update(); particles[i].draw();
-                        for (let j = i; j < particles.length; j++) {
-                            const dx = particles[i].x - particles[j].x; const dy = particles[i].y - particles[j].y;
-                            const distance = Math.sqrt(dx * dx + dy * dy);
-                            if (distance < 120) {
-                                ctx.beginPath(); ctx.strokeStyle = `rgba(0, 240, 255, ${0.8 - distance / 120})`;
-                                ctx.lineWidth = 0.5; ctx.moveTo(particles[i].x, particles[i].y); ctx.lineTo(particles[j].x, particles[j].y); ctx.stroke();
-                            }
-                        }
-                    }
-                    animationFrameId = requestAnimationFrame(animate);
-                };
-
-                resize(); animate();
-                return () => { window.removeEventListener('resize', resize); cancelAnimationFrame(animationFrameId); };
-            }, []);
-            return <canvas ref={canvasRef} className="fixed inset-0 z-0 opacity-50 pointer-events-none" />;
-        };
-
-        const ProgressBar = () => {
-            const [scrollPct, setScrollPct] = useState(0);
-            useEffect(() => {
-                const handleScroll = () => {
-                    const winScroll = document.body.scrollTop || document.documentElement.scrollTop;
-                    const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
-                    setScrollPct((winScroll / height) * 100);
-                };
-                window.addEventListener("scroll", handleScroll);
-                return () => window.removeEventListener("scroll", handleScroll);
-            }, []);
             return (
-                <div className="fixed top-0 left-0 h-1 bg-cyan-900 w-full z-50">
-                    <div className="h-full bg-cyan-400 timeline-line transition-all duration-150 ease-out" style={{ width: `${scrollPct}%` }}></div>
+                <div className="spark-wrapper milestone-node" ref={cardRef} onMouseMove={handleMouseMove} onMouseLeave={handleMouseLeave}>
+                    <div className="tilt-card-inner">
+                        <WikiImage wikiTerm={person.wikiTerm} name={person.name} />
+                        <div className="card-content flex-1 p-5 md:p-6 flex flex-col justify-center relative z-10">
+                            {person.isVideo ? (
+                                <div className="absolute -top-3 right-4 video-badge bg-red-600/90 px-3 py-1 rounded text-[10px] font-bold text-white shadow-lg flex items-center">
+                                    LECTURE
+                                </div>
+                            ) : (
+                                <div className="absolute -top-3 right-4 bg-cyan-900/90 px-2 py-0.5 rounded text-[10px] font-mono text-cyan-300 border border-cyan-500/50 shadow-lg">
+                                    {person.year}
+                                </div>
+                            )}
+                            
+                            <h3 className="text-xl md:text-2xl font-black text-white mb-3 tracking-tight">{person.name}</h3>
+                            <div className="space-y-2 mb-1">
+                                <div className="flex items-start">
+                                    <TopicIcon />
+                                    <div className="min-w-0">
+                                        <span className="block text-[10px] font-bold text-cyan-500 uppercase tracking-widest mb-0.5">Concept</span>
+                                        <span className="text-slate-200 font-medium text-sm leading-tight">{person.topic}</span>
+                                    </div>
+                                </div>
+                                <div className="flex items-start">
+                                    <ImpactIcon />
+                                    <div className="min-w-0">
+                                        <span className="block text-[10px] font-bold text-emerald-500 uppercase tracking-widest mb-0.5">Impact</span>
+                                        <span className="text-slate-400 text-xs leading-relaxed block">{person.context}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="mechanism-container">
+                                <span className="block text-[10px] font-bold text-indigo-400 uppercase tracking-widest mb-2">Mechanism</span>
+                                <div className="space-y-1.5 pl-2 border-l border-indigo-500/30">
+                                    {person.mechanism.map((step, idx) => (
+                                        <div key={idx} className="flex items-start text-[11px] text-slate-300 font-mono bg-slate-950/80 rounded px-2 py-1.5 border border-slate-800">
+                                            <CodeIcon /><span>{step}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                                {person.quote && (
+                                    <div className="mt-3 pt-3 border-t border-slate-700/50 flex gap-2 items-start">
+                                        <QuoteIcon />
+                                        <p className="text-slate-300 italic font-medium text-[11px] leading-relaxed">"{person.quote}"</p>
+                                    </div>
+                                )}
+                                {person.isVideo && (
+                                    <div className="mt-3 pt-3 border-t border-slate-700/50 flex items-center justify-center">
+                                        <YoutubeIcon />
+                                        <span className="text-sm font-medium underline decoration-slate-600 underline-offset-4 hover:decoration-red-400 transition-colors text-white">Watch on YouTube</span>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
                 </div>
             );
         };
 
-        const useScrollReveal = () => {
-          const [isVisible, setIsVisible] = useState(false);
-          const domRef = useRef();
-          useEffect(() => {
-            const observer = new IntersectionObserver(entries => {
-              entries.forEach(entry => { if (entry.isIntersecting) { setIsVisible(true); observer.unobserve(entry.target); } });
-            }, { threshold: 0.1 });
-            if (domRef.current) observer.observe(domRef.current);
-            return () => { if (domRef.current) observer.unobserve(domRef.current); };
-          }, []);
-          return [domRef, isVisible];
-        };
+        const BinaryRain = () => {
+            const particles = useMemo(() => Array.from({length: 150}).map(() => ({
+                tx: `${(Math.random() - 0.5) * 3500}px`,
+                ty: `${(Math.random() - 0.5) * 2500}px`,
+                delay: `${Math.random() * 4}s`,
+                duration: `${2 + Math.random() * 3}s`,
+                val: Math.random() > 0.5 ? '1' : '0'
+            })), []);
 
-        const TimelineCard = ({ person }) => {
-          const [ref, isVisible] = useScrollReveal();
-          const cardRef = useRef(null);
-
-          const handleMouseMove = useCallback((e) => {
-            if (!cardRef.current || window.innerWidth < 768) return; 
-            const rect = cardRef.current.getBoundingClientRect();
-            const x = e.clientX - rect.left; const y = e.clientY - rect.top;
-            const centerX = rect.width / 2; const centerY = rect.height / 2;
-            const rotateX = ((y - centerY) / centerY) * -3;
-            const rotateY = ((x - centerX) / centerX) * 3;
-            cardRef.current.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
-            cardRef.current.style.boxShadow = `${-rotateY}px ${rotateX}px 30px rgba(0, 240, 255, 0.15)`;
-          }, []);
-
-          const handleMouseLeave = useCallback(() => {
-            if (!cardRef.current || window.innerWidth < 768) return;
-            cardRef.current.style.transform = `perspective(1000px) rotateX(0deg) rotateY(0deg)`;
-            cardRef.current.style.boxShadow = `none`;
-          }, []);
-
-          return (
-            <div ref={ref} className={`relative w-full mb-12 transition-all duration-1000 ease-out transform ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-24"}`}>
-              <a 
-                href={person.url} target="_blank" rel="noopener noreferrer"
-                ref={cardRef} onMouseMove={handleMouseMove} onMouseLeave={handleMouseLeave}
-                className="tilt-card bg-slate-900/50 backdrop-blur-lg rounded-2xl border border-slate-700/60 hover:border-cyan-400/60 min-w-0 group flex-col md:flex-row cursor-pointer"
-              >
-                <WikiImage wikiTerm={person.wikiTerm} name={person.name} year={person.year} />
-                
-                <div className="tilt-card-inner flex-1 p-6 md:p-8 flex flex-col justify-center text-slate-300 relative z-10 w-full">
-                  <h3 className="text-2xl md:text-3xl font-extrabold text-white mb-5 tracking-tight drop-shadow-md group-hover:text-cyan-300 transition-colors">{person.name}</h3>
-                  <div className="space-y-4 mb-2">
-                    <div className="flex items-start">
-                      <TopicIcon />
-                      <div className="min-w-0">
-                        <span className="block text-xs font-bold text-cyan-500 uppercase tracking-widest mb-1">Concept</span>
-                        <span className="text-slate-200 font-medium text-[15px] md:text-base leading-snug">{person.topic}</span>
-                      </div>
-                    </div>
-                    <div className="flex items-start">
-                      <ImpactIcon />
-                      <div className="min-w-0">
-                        <span className="block text-xs font-bold text-emerald-500 uppercase tracking-widest mb-1">Impact</span>
-                        <span className="text-slate-400 text-sm md:text-[15px] leading-relaxed block">{person.context}</span>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  {/* Expandable Mechanism Section */}
-                  <div className="mechanism-container">
-                      <span className="block text-xs font-bold text-indigo-400 uppercase tracking-widest mb-3">Core Mechanism</span>
-                      <div className="space-y-2 pl-2 border-l border-indigo-500/30">
-                          {person.mechanism.map((step, idx) => (
-                              <div 
-                                key={idx} 
-                                className="mechanism-item flex items-start text-sm text-slate-300 font-mono bg-slate-900/60 rounded px-3 py-2 border border-slate-700/50"
-                                style={{ transitionDelay: `${idx * 100}ms` }}
-                              >
-                                  <CodeIcon />
-                                  <span dangerouslySetInnerHTML={{__html: step}} />
-                              </div>
-                          ))}
-                      </div>
-                  </div>
-
-                  {person.quote && (
-                    <div className="mt-6 pt-4 border-t border-slate-700/50 flex gap-3 items-start">
-                      <QuoteIcon />
-                      <p className="text-slate-300 italic font-medium text-sm md:text-[15px] leading-relaxed drop-shadow-sm">"{person.quote}"</p>
-                    </div>
-                  )}
+            return (
+                <div className="space-bg">
+                    {particles.map((p, i) => (
+                        <div key={i} className="binary-particle" style={{
+                            '--tx': p.tx, '--ty': p.ty, 
+                            animationDelay: p.delay, animationDuration: p.duration
+                        }}>{p.val}</div>
+                    ))}
                 </div>
-              </a>
-            </div>
-          );
+            );
         };
 
         function App() {
-          return (
-            <>
-              <ProgressBar />
-              <CanvasBackground />
-              
-              <div className="relative z-10 px-4 md:px-8 max-w-5xl mx-auto pb-32">
-                <header className="mb-24 mt-20 text-center">
-                  <div className="inline-block mb-6 px-6 py-2 rounded-full bg-slate-900/80 border border-cyan-500/30 text-cyan-400 text-sm font-bold tracking-[0.2em] uppercase timeline-line backdrop-blur-md">
-                    Chronological Journey
-                  </div>
-                  <h1 className="text-4xl md:text-7xl font-black text-white tracking-tighter mb-6 leading-tight">
-                    Cryptography: <br/>
-                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-emerald-400 glow-text">
-                      Math to Machine
-                    </span>
-                  </h1>
-                  <p className="text-lg md:text-xl text-slate-400 max-w-3xl mx-auto leading-relaxed font-light">
-                    From ancient geometry to quantum algorithms. Hover over any card to unpack their mathematical construction and core mechanisms.
-                  </p>
-                </header>
+            const [viewState, setViewState] = useState('intro'); 
+            
+            // Bypass React for 60fps
+            const currentZRef = useRef(0);
+            const currentXRef = useRef(0);
+            const currentYearNumRef = useRef(parseYear(journeyData[0].year));
+            const requestRef = useRef();
+            
+            const cameraRef = useRef(null);
+            const spiritRef = useRef(null);
+            const yearTextRef = useRef(null);
 
-                <main className="relative border-l border-slate-800 ml-4 md:ml-8 pl-6 md:pl-16">
-                  {chronologicalData.map((eraBlock, sIdx) => (
-                    <div key={sIdx} className="mb-20">
-                      <div className="relative mb-10">
-                        <div className="absolute -left-[33px] md:-left-[73px] top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-cyan-400 timeline-line border-2 border-cryptodark"></div>
-                        <h2 className="text-xl md:text-2xl font-bold text-white tracking-widest uppercase opacity-90 drop-shadow-md">
-                          {eraBlock.era}
-                        </h2>
-                      </div>
-                      
-                      <div className="flex flex-col">
-                        {eraBlock.items.map((person, pIdx) => (
-                          <TimelineCard key={pIdx} person={person} />
-                        ))}
-                      </div>
+            const maxZ = (journeyData.length - 1) * Z_SPACING;
+
+            // Random Path ensuring perfect centering
+            const points = useMemo(() => {
+                let cx = 0;
+                return journeyData.map((_, i) => {
+                    const isMobile = window.innerWidth < 768;
+                    if (i > 0) {
+                        const dir = i % 2 === 0 ? 1 : -1;
+                        const variance = Math.random() * 150;
+                        cx += dir * (isMobile ? 150 : 350) + variance;
+                    }
+                    return { x: cx, z: i * -Z_SPACING };
+                });
+            }, []);
+
+            // Flowing SVG Path
+            const svgPath = useMemo(() => {
+                if (points.length === 0) return "";
+                let d = `M ${points[0].x + 2000} ${-points[0].z}`; 
+                for (let i = 1; i < points.length; i++) {
+                    const prev = points[i - 1];
+                    const curr = points[i];
+                    const midZ = (-prev.z + -curr.z) / 2;
+                    d += ` C ${prev.x + 2000} ${midZ}, ${curr.x + 2000} ${midZ}, ${curr.x + 2000} ${-curr.z}`;
+                }
+                return d;
+            }, [points]);
+
+            const startJourney = () => {
+                setViewState('unrolling');
+                setTimeout(() => {
+                    setViewState('active');
+                    window.scrollTo(0, 0); 
+                }, 2500); 
+            };
+
+            const updateWorld = () => {
+                if (viewState === 'active') {
+                    const targetZ = -window.scrollY; 
+                    currentZRef.current += (targetZ - currentZRef.current) * 0.08;
+                    
+                    const CAMERA_OFFSET_Z = 800;
+                    const cameraZPos = currentZRef.current + CAMERA_OFFSET_Z;
+
+                    const zProgress = Math.abs(currentZRef.current) / Z_SPACING;
+                    
+                    // Center Lock Logic: Always target the exact X of the closest node
+                    const closestIdx = Math.min(journeyData.length - 1, Math.max(0, Math.round(zProgress)));
+                    const targetX = points[closestIdx].x;
+
+                    // Smooth Follow Path X
+                    currentXRef.current += (targetX - currentXRef.current) * 0.05;
+                    
+                    if (cameraRef.current) {
+                        cameraRef.current.style.transform = `translate3d(${-currentXRef.current}px, 0px, ${-cameraZPos}px) rotateX(0deg)`;
+                    }
+
+                    // --- Smooth Counter Logic for Year ---
+                    const currentIdx = Math.floor(zProgress);
+                    const nextIdx = Math.min(currentIdx + 1, journeyData.length - 1);
+                    const t = zProgress - currentIdx; // Fractional progress between two nodes
+                    
+                    const startYNum = parseYear(journeyData[currentIdx].year);
+                    const endYNum = parseYear(journeyData[nextIdx].year);
+                    
+                    const exactYearTarget = startYNum + (endYNum - startYNum) * t;
+                    currentYearNumRef.current += (exactYearTarget - currentYearNumRef.current) * 0.1;
+                    
+                    if (yearTextRef.current) {
+                        const displayYear = formatYear(currentYearNumRef.current);
+                        if (yearTextRef.current.innerText !== displayYear) {
+                            yearTextRef.current.innerText = displayYear;
+                        }
+                    }
+
+                    // --- 3D Guiding Spirit Floating Ahead ---
+                    const lookAheadZ = currentZRef.current - 1000; 
+                    const lookAheadProgress = Math.abs(lookAheadZ) / Z_SPACING;
+                    const laIdx = Math.min(Math.floor(lookAheadProgress), points.length - 2);
+                    const laT = Math.max(0, Math.min(1, lookAheadProgress - laIdx));
+                    
+                    let spiritX = 0;
+                    if (laIdx >= 0 && points[laIdx+1]) {
+                        spiritX = points[laIdx].x + (points[laIdx+1].x - points[laIdx].x) * laT;
+                    } else if (points.length > 0) {
+                        spiritX = points[points.length-1].x;
+                    }
+
+                    if (spiritRef.current) {
+                        const floatY = Math.sin(Date.now() / 250) * 15 + 100; 
+                        spiritRef.current.style.transform = `translate3d(${spiritX}px, ${floatY}px, ${lookAheadZ}px)`;
+                    }
+
+                    // Card Visibility Logic
+                    const nodes = document.querySelectorAll('.spark-wrapper');
+                    nodes.forEach((node, i) => {
+                        const nodeZ = points[i].z; 
+                        const distToCamera = cameraZPos - nodeZ; 
+                        
+                        if (distToCamera < 100 || distToCamera > 3500) {
+                            node.style.opacity = '0';
+                            node.style.pointerEvents = 'none';
+                            if (distToCamera < 100) {
+                                node.style.transform = `translate3d(${points[i].x}px, -150px, ${points[i].z}px) scale(1.1)`;
+                            }
+                        } else {
+                            let opacity = 1;
+                            if (distToCamera > 2000) opacity = 1 - ((distToCamera - 2000) / 1500); 
+                            else if (distToCamera < 400) opacity = (distToCamera - 100) / 300;    
+                            
+                            node.style.opacity = opacity.toString();
+                            node.style.pointerEvents = opacity > 0.5 ? 'auto' : 'none';
+                            node.style.transform = `translate3d(${points[i].x}px, 0px, ${points[i].z}px) scale(1)`;
+                        }
+                    });
+                }
+                requestRef.current = requestAnimationFrame(updateWorld);
+            };
+
+            useEffect(() => {
+                requestRef.current = requestAnimationFrame(updateWorld);
+                return () => cancelAnimationFrame(requestRef.current);
+            }, [viewState, points]);
+
+            return (
+                <>
+                    <BinaryRain />
+
+                    {/* Virtual Track matching exactly the 3D space size */}
+                    {viewState === 'active' && (
+                        <div id="scroll-track" style={{ height: `${maxZ + window.innerHeight * 1.5}px` }}></div>
+                    )}
+
+                    {viewState === 'intro' && (
+                        <div className="intro-overlay">
+                            <h1 className="text-4xl md:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-emerald-400 mb-6 drop-shadow-[0_0_20px_rgba(0,240,255,0.4)]">
+                                The Crypto Timeline
+                            </h1>
+                            <p className="text-slate-400 font-mono mb-10 max-w-md text-center">Mathematics to Machine: A 3D Journey.</p>
+                            <button onClick={startJourney} className="px-8 py-3 bg-cyan-600/20 hover:bg-cyan-500/40 border border-cyan-400 rounded-full text-cyan-300 font-bold tracking-widest uppercase transition-all shadow-[0_0_15px_rgba(0,240,255,0.4)]">
+                                Enter the Void
+                            </button>
+                        </div>
+                    )}
+
+                    <div className={`fixed top-6 left-0 right-0 z-50 flex flex-col items-center pointer-events-none transition-opacity duration-1000 ${viewState === 'active' ? 'opacity-100' : 'opacity-0'}`}>
+                        <div className="bg-black/60 px-4 py-1.5 rounded-full border border-slate-700/50 backdrop-blur shadow-[0_0_10px_rgba(0,240,255,0.2)]">
+                            <span className="text-cyan-400 font-bold text-xs uppercase tracking-widest">Controls:</span>
+                            <span className="text-slate-300 text-xs ml-2">Scroll karke Space me aage badhein</span>
+                        </div>
                     </div>
-                  ))}
 
-                  <section className="mt-20 relative rounded-3xl overflow-hidden shadow-[0_0_40px_rgba(0,240,255,0.1)] border border-slate-800 hover:border-cyan-500/50 transition-colors duration-300">
-                    <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-cryptodark to-cyan-900/20"></div>
-                    <a href="https://www.youtube.com/results?search_query=Richard+Feynman+Names+Don%27t+Constitute+Knowledge" target="_blank" rel="noopener noreferrer" className="relative z-10 p-8 md:p-16 text-center flex flex-col items-center cursor-pointer group block">
-                      <div className="inline-block mb-6 px-4 py-2 rounded-full bg-slate-900/50 border border-slate-700 text-cyan-300 text-xs font-bold tracking-widest uppercase group-hover:bg-cyan-900/30 transition-colors">
-                        The Illusion of Knowledge
-                      </div>
-                      <h2 className="text-3xl md:text-4xl font-extrabold mb-6 text-white tracking-tight group-hover:text-cyan-300 transition-colors">
-                        Names Don't Constitute Knowledge
-                      </h2>
-                      <div className="flex items-center justify-center gap-3 text-slate-400 group-hover:text-white transition-colors mt-4">
-                        <svg viewBox="0 0 24 24" fill="currentColor" className="w-8 h-8 text-red-600 drop-shadow-md">
-                          <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
-                        </svg>
-                        <span className="text-lg md:text-xl font-medium underline decoration-slate-600 underline-offset-4 group-hover:decoration-cyan-400">Watch "Richard Feynman - Names Don't Constitute Knowledge" on YouTube</span>
-                      </div>
-                    </a>
-                  </section>
+                    {/* 3D World */}
+                    <div id="viewport" className={viewState === 'unrolling' ? 'map-unrolling' : viewState === 'active' ? 'map-active' : ''}>
+                        <div id="camera" ref={cameraRef}>
+                            <div id="world">
+                                
+                                {/* Animated Subtle Glowing Path Line */}
+                                <svg className="svg-path-3d" viewBox={`0 0 4000 ${maxZ + 1000}`}>
+                                    <path 
+                                        className="path-line"
+                                        d={svgPath} 
+                                        fill="none" 
+                                        stroke="rgba(0, 240, 255, 0.3)" 
+                                        strokeWidth="4" 
+                                        strokeLinecap="round"
+                                        style={{ filter: 'drop-shadow(0 0 10px rgba(0, 240, 255, 0.6))' }}
+                                    />
+                                </svg>
 
-                </main>
-              </div>
-            </>
-          );
+                                {/* The 3D Guiding Spirit */}
+                                <div id="spirit-3d" ref={spiritRef} style={{ opacity: viewState === 'active' ? 1 : 0 }}>
+                                    <div className="spirit-year" ref={yearTextRef}>{journeyData[0].year}</div>
+                                    <div className="guiding-flame"></div>
+                                </div>
+
+                                {points.map((pt, i) => {
+                                    const person = journeyData[i];
+                                    return (
+                                        <div 
+                                            key={person.id} 
+                                            className="milestone-node" 
+                                            style={{ transform: `translate3d(${pt.x}px, 0px, ${pt.z}px)`, opacity: viewState === 'active' ? undefined : 0 }}
+                                        >
+                                            <a href={person.url} target="_blank" rel="noopener noreferrer" className="block w-full">
+                                                <MilestoneCard person={person} />
+                                            </a>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    </div>
+                </>
+            );
         }
 
         const root = ReactDOM.createRoot(document.getElementById('root'));
